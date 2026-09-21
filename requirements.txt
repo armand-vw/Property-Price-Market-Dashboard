@@ -1,0 +1,13 @@
+# Core runtime dependencies for the Real Estate Price Estimator & Market Insights Dashboard.
+# Pinned to the versions used to develop and verify the project.
+
+streamlit==1.64.0
+plotly==7.1.0
+xgboost==3.4.1
+scikit-learn==1.9.1
+pandas==3.0.6
+numpy==2.5.3
+joblib==1.6.0
+
+# Development / testing
+pytest==9.1.1

@@ -1,0 +1,28 @@
+{
+  "mae": 96459.08286378204,
+  "rmse": 135918.77425007522,
+  "r2": 0.941770897898723,
+  "mape": 10.060807446133321,
+  "median_ape": 8.759164824298974,
+  "residual_p10": -15.775571471306307,
+  "residual_p90": 15.932802366965978,
+  "baseline_mae": 429891.5994935898,
+  "improvement_vs_baseline_pct": 77.56199865793833,
+  "model_name": "XGBRegressor",
+  "n_records": 1950,
+  "n_train": 1560,
+  "n_test": 390,
+  "test_size": 0.2,
+  "features": [
+    "bedrooms",
+    "bathrooms",
+    "sqft",
+    "lot_size",
+    "year_built",
+    "has_pool",
+    "garage_spaces",
+    "neighborhood"
+  ],
+  "trained_at": "2026-09-21T22:23:15+00:00",
+  "target_transform": "log1p / expm1"
+}
