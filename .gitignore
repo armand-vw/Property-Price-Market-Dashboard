@@ -16,7 +16,9 @@ __pycache__/
 .idea/
 .vscode/
 
-# Generated data & model binaries (reproducible from code)
+# Generated data (reproducible from code)
 data/*.csv
 data/cache/
-models/*.joblib
+
+# NOTE: the fitted model (models/price_model.joblib) intentionally IS committed
+# so the hosted app loads instantly instead of retraining on every cold start.

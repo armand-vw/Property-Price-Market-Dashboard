@@ -22,7 +22,7 @@ from __future__ import annotations
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -280,7 +280,7 @@ def get_market_data(force_refresh: bool = False) -> dict:
 
     summary = merge_rents(build_market_summary(markets, history), rents)
     LAST_SOURCE = source
-    LAST_FETCHED = datetime.now(timezone.utc)
+    LAST_FETCHED = datetime.now(UTC)
     return {
         "summary": summary,
         "history": history,
@@ -297,13 +297,6 @@ def list_neighborhoods(meta: pd.DataFrame, market_id: int) -> pd.DataFrame:
     """Return the neighbourhoods belonging to a market, most prominent first."""
     subset = meta[meta["market_id"] == market_id].copy()
     return subset.sort_values("size_rank").reset_index(drop=True)
-
-
-def get_neighborhood_history(
-    history: pd.DataFrame, neighborhood_ids: list[int]
-) -> pd.DataFrame:
-    """Filter neighbourhood history to the requested ids."""
-    return history[history["neighborhood_id"].isin(neighborhood_ids)]
 
 
 def neighborhood_market_lookup(

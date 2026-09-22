@@ -8,7 +8,6 @@ import pytest
 
 import config
 from data_loader import (
-    clean_data,
     generate_synthetic_data,
     get_location_stats,
     get_market_stats,

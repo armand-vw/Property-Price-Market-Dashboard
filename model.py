@@ -30,7 +30,7 @@ Run directly to train from the command line::
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from functools import lru_cache
 from typing import Any
 
@@ -237,7 +237,7 @@ def train_pipeline(
             "n_test": int(len(X_test)),
             "test_size": float(test_size),
             "features": config.FEATURE_COLUMNS,
-            "trained_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "trained_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "target_transform": "log1p / expm1",
         }
     )
@@ -343,7 +343,7 @@ def _load_metrics(path=config.METRICS_PATH) -> dict[str, Any]:
     """Load persisted metrics, returning an empty dict when absent."""
     if not path.exists():
         return {}
-    with open(path, "r", encoding="utf-8") as handle:
+    with open(path, encoding="utf-8") as handle:
         return json.load(handle)
 
 

@@ -2,13 +2,19 @@
 
 [![CI](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/ci.yml)
 [![Project Page](https://img.shields.io/badge/Project%20Page-GitHub%20Pages-4F46E5?logo=githubpages&logoColor=white)](https://armand-vw.github.io/Property-Price-Market-Dashboard/)
-[![Streamlit](https://img.shields.io/badge/Streamlit-App-FF4B4B?logo=streamlit&logoColor=white)](https://armand-vw.github.io/Property-Price-Market-Dashboard/)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](LICENSE)
 
 An end-to-end, production-style machine-learning application that estimates
 property values and surfaces **live US market insights** across the 15 largest
 metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
+
+<p align="center">
+  <a href="https://armand-vw.github.io/Property-Price-Market-Dashboard/">
+    <img src="assets/hero.png" alt="Home values, rental yield, growth and feature importance across 15 US metros" width="100%" />
+  </a>
+</p>
+
 
 > **Data:** market values, rents and trends are **real monthly data from
 > [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI home values,
@@ -18,16 +24,31 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 
 ---
 
+## 📈 Results at a Glance
+
+| | |
+| --- | --- |
+| Markets / neighbourhoods | **15** / **180** real US locations |
+| Training listings | **7,022**, anchored to real neighbourhood medians |
+| Model | XGBoost · 80/20 hold-out · `log1p` target |
+| **R²** | **0.919** |
+| **MAPE** | **14.7%** (median APE 12.6%) |
+| **MAE** | **$89,171** |
+| Improvement vs. median baseline | **74.8% lower MAE** |
+
+---
+
 ## 🔗 Live Demo
 
 | | Link |
 | --- | --- |
 | **Interactive project page** (GitHub Pages, no install) | **https://armand-vw.github.io/Property-Price-Market-Dashboard/** |
-| **Live prediction app** (Streamlit Community Cloud) | *Link added after deployment* |
+| **Full prediction app** | Deployed from [`app.py`](app.py) on Streamlit Community Cloud |
 
 The GitHub Pages site is a **preview** — it renders real, interactive Plotly
-charts from the market data and trained model at build time. The full app with
-live estimation runs on Streamlit Community Cloud ([`app.py`](app.py)).
+charts from the market data and trained model at build time. The full app adds
+live model inference and the valuation tool; it runs from `app.py` (locally via
+`streamlit run app.py`, or on Streamlit Community Cloud).
 
 ---
 
@@ -76,16 +97,20 @@ Property-Price-Market-Dashboard/
 │   └── neighborhood_history.csv # monthly neighbourhood home values
 ├── scripts/
 │   ├── build_market_snapshot.py # Builds market_data/ from Zillow (~100 MB once)
-│   └── build_site.py            # Renders the GitHub Pages site into docs/
+│   ├── build_site.py            # Renders the GitHub Pages site into docs/
+│   └── build_images.py          # Generates the README charts into assets/
 ├── docs/                        # GitHub Pages landing page (static)
+├── assets/                      # README chart images
 ├── tests/                       # pytest suite (offline)
 ├── .github/workflows/
-│   ├── ci.yml                   # CI: pytest on push / PR
+│   ├── ci.yml                   # CI: ruff lint + pytest on push / PR
 │   └── refresh-market-data.yml  # Monthly Zillow snapshot refresh
-├── requirements.txt             # Pinned dependencies
+├── requirements.txt             # Pinned runtime dependencies
+├── requirements-dev.txt         # Dev tools (ruff, pytest, matplotlib)
+├── pyproject.toml               # Project metadata + ruff/pytest config
 ├── runtime.txt                  # Python version for Streamlit Cloud
 ├── data/                        # Generated CSV + fetch cache (git-ignored)
-└── models/                      # Fitted pipeline + metrics (artifacts)
+└── models/                      # Fitted pipeline + metrics (committed)
 ```
 
 ---
@@ -103,12 +128,22 @@ pip install -r requirements.txt
 streamlit run app.py               # opens http://localhost:8501
 ```
 
-On first launch the app generates the synthetic dataset, loads market data
-(live Zillow fetch, snapshot fallback) and trains the model, caching artifacts
-under `data/` and `models/`.
+The fitted model and market snapshot are committed, so the app starts instantly.
+If `models/price_model.joblib` is ever missing, the app regenerates the dataset
+from the committed market snapshot and retrains automatically.
 
 > **Debian/Ubuntu users:** if `python3 -m venv` fails, install the venv package
 > with `sudo apt install python3.12-venv` (or use `pip install virtualenv`).
+
+### Development
+
+```bash
+pip install -r requirements.txt -r requirements-dev.txt
+
+pytest -q                          # run the test suite (offline)
+ruff check .                       # lint
+python scripts/build_images.py     # regenerate the README charts
+```
 
 ### Optional CLI
 
@@ -118,7 +153,6 @@ python model.py                          # retrain + print evaluation summary
 python market_data.py                    # print the live market overview
 python scripts/build_market_snapshot.py  # refresh market_data/ from Zillow
 python scripts/build_site.py             # regenerate the GitHub Pages site
-pytest -q                                # run the test suite
 ```
 
 ---
@@ -269,8 +303,19 @@ feature-importance aggregation and inference ranges.
 - [ ] Hyper-parameter tuning with Optuna and cross-validated MAPE.
 - [ ] Containerise with Docker.
 - [x] Live real market data with snapshot fallback.
-- [x] Continuous integration with GitHub Actions (`pytest`).
+- [x] Continuous integration with GitHub Actions (`pytest` + `ruff`).
 - [x] Static project page on GitHub Pages.
+
+---
+
+## 👤 About
+
+Built by **armand-vw** as a portfolio project demonstrating end-to-end data
+science and full-stack Python: real-data ingestion and resilience, feature
+engineering, a leak-free ML pipeline, quantified evaluation, and a polished
+interactive product.
+
+[![GitHub](https://img.shields.io/badge/GitHub-armand--vw-181717?logo=github&logoColor=white)](https://github.com/armand-vw)
 
 ---
 

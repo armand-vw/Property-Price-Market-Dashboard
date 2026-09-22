@@ -10,8 +10,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install ruff
+        run: pip install ruff==0.16.8
+
+      - name: Lint
+        run: ruff check .
+
   test:
-    name: Test (Python 3.12)
+    name: Tests (Python 3.12)
     runs-on: ubuntu-latest
 
     steps:

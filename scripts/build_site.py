@@ -21,7 +21,7 @@ from __future__ import annotations
 import html
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -124,7 +124,7 @@ def build_market_growth(history: pd.DataFrame, summary: pd.DataFrame, top_n: int
     """10-year indexed home-value growth for the largest markets."""
     top_markets = summary.sort_values("size_rank").head(top_n)
     fig = go.Figure()
-    for color, row in zip(config.CHART_SEQUENCE, top_markets.itertuples()):
+    for color, row in zip(config.CHART_SEQUENCE, top_markets.itertuples(), strict=False):
         series = history[history["market_id"] == row.market_id].sort_values("month")
         series = series[series["month"] >= series["month"].max() - pd.DateOffset(years=10)]
         if series.empty:
@@ -344,7 +344,7 @@ def render_page(
         "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_YIELD__": build_rental_yield(summary),
         "__CHART_IMPORTANCE__": build_feature_importance(importance),
-        "__GENERATED_AT__": datetime.now(timezone.utc).strftime("%b %Y"),
+        "__GENERATED_AT__": datetime.now(UTC).strftime("%b %Y"),
     }
 
     page = TEMPLATE

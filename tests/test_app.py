@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import market_data
 from streamlit.testing.v1 import AppTest
+
+import market_data
 
 APP_PATH = str(Path(__file__).resolve().parents[1] / "app.py")
 

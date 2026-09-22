@@ -1,0 +1,8 @@
+# Development-only tools: linting, testing and README image generation.
+# Install with:  pip install -r requirements.txt -r requirements-dev.txt
+
+pytest==9.1.1
+ruff==0.16.8
+
+# Static image generation for README/docs previews (scripts/build_images.py).
+matplotlib==3.11.2
