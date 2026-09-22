@@ -131,9 +131,11 @@ def _parse_zillow_long(
 def fetch_live_metro_history(force_refresh: bool = False) -> pd.DataFrame | None:
     """Fetch and parse live metro-level ZHVI into long format.
 
-    Returns ``None`` if the network is unavailable, signalling the caller to use
-    the committed snapshot.
+    Returns ``None`` if offline or the network is unavailable, signalling the
+    caller to use the committed snapshot.
     """
+    if config.OFFLINE:
+        return None
     raw_path = _download_cached(
         config.ZILLOW_METRO_ZHVI_URL, "metro_zhvi_live.csv", force_refresh
     )
@@ -149,9 +151,11 @@ def fetch_live_metro_history(force_refresh: bool = False) -> pd.DataFrame | None
 def fetch_live_metro_rents(force_refresh: bool = False) -> pd.DataFrame | None:
     """Fetch and parse live metro-level ZORI rents into long format.
 
-    Returns ``None`` if the network is unavailable, signalling the caller to use
-    the committed snapshot.
+    Returns ``None`` if offline or the network is unavailable, signalling the
+    caller to use the committed snapshot.
     """
+    if config.OFFLINE:
+        return None
     raw_path = _download_cached(
         config.ZILLOW_METRO_ZORI_URL, "metro_zori_live.csv", force_refresh
     )

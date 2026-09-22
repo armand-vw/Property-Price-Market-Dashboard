@@ -1,0 +1,24 @@
+# Keep the image lean: only app code, committed market data and the model are
+# copied in (see Dockerfile COPY instructions).
+.venv/
+venv/
+.git/
+.github/
+.gitignore
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Not needed at runtime
+data/
+docs/
+assets/
+tests/
+scripts/
+conftest.py
+*.md
+requirements-dev.txt
+pyproject.toml
+LICENSE
+runtime.txt

@@ -43,12 +43,14 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 | | Link |
 | --- | --- |
 | **Interactive project page** (GitHub Pages, no install) | **https://armand-vw.github.io/Property-Price-Market-Dashboard/** |
-| **Full prediction app** | Deployed from [`app.py`](app.py) on Streamlit Community Cloud |
+| **Full app** (self-hosted) | Run locally or with Docker — see [Quickstart](#-quickstart) |
 
-The GitHub Pages site is a **preview** — it renders real, interactive Plotly
-charts from the market data and trained model at build time. The full app adds
-live model inference and the valuation tool; it runs from `app.py` (locally via
-`streamlit run app.py`, or on Streamlit Community Cloud).
+The GitHub Pages site is a **static preview** rendered from the real data and
+trained model at build time. The full interactive app (live model inference and
+the valuation tool) is **self-contained**: run it locally with
+`streamlit run app.py` or with Docker. No third-party hosting is required — the
+market snapshot and fitted model are committed, so it even runs fully offline
+(`RPE_OFFLINE=1`).
 
 ---
 
@@ -108,7 +110,8 @@ Property-Price-Market-Dashboard/
 ├── requirements.txt             # Pinned runtime dependencies
 ├── requirements-dev.txt         # Dev tools (ruff, pytest, matplotlib)
 ├── pyproject.toml               # Project metadata + ruff/pytest config
-├── runtime.txt                  # Python version for Streamlit Cloud
+├── Dockerfile                   # Self-contained image (no external hosting)
+├── .dockerignore
 ├── data/                        # Generated CSV + fetch cache (git-ignored)
 └── models/                      # Fitted pipeline + metrics (committed)
 ```
@@ -143,6 +146,19 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest -q                          # run the test suite (offline)
 ruff check .                       # lint
 python scripts/build_images.py     # regenerate the README charts
+```
+
+### Run with Docker
+
+The image is self-contained (app + committed market snapshot + fitted model), so
+it needs no network at runtime:
+
+```bash
+docker build -t property-insights .
+docker run --rm -p 8501:8501 property-insights        # http://localhost:8501
+
+# fully offline (serve the committed snapshot, no outbound calls):
+docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights
 ```
 
 ### Optional CLI
@@ -301,7 +317,7 @@ feature-importance aggregation and inference ranges.
       loader interface.
 - [ ] SHAP values for per-prediction explainability.
 - [ ] Hyper-parameter tuning with Optuna and cross-validated MAPE.
-- [ ] Containerise with Docker.
+- [x] Containerise with Docker (self-contained, no external hosting).
 - [x] Live real market data with snapshot fallback.
 - [x] Continuous integration with GitHub Actions (`pytest` + `ruff`).
 - [x] Static project page on GitHub Pages.

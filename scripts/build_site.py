@@ -5,21 +5,16 @@ Generate the static GitHub Pages landing page in ``docs/``.
 
 The page embeds real, interactive Plotly figures built from live/committed
 Zillow market data and the trained pipeline, so it stays in sync with the
-project. The live prediction tool runs on Streamlit Community Cloud and is
-linked from the page.
+project. The full interactive app runs locally or via Docker (see the page).
 
 Usage
 -----
     python scripts/build_site.py
-
-    # point the "Launch live app" buttons at your deployment:
-    LIVE_APP_URL=https://your-app.streamlit.app python scripts/build_site.py
 """
 
 from __future__ import annotations
 
 import html
-import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -38,8 +33,6 @@ from data_loader import load_or_create_data  # noqa: E402
 from model import ensure_model  # noqa: E402
 
 REPO_URL = "https://github.com/armand-vw/Property-Price-Market-Dashboard"
-PAGES_URL = "https://armand-vw.github.io/Property-Price-Market-Dashboard/"
-LIVE_APP_URL = os.environ.get("LIVE_APP_URL", "").strip()
 
 DOCS_DIR = config.BASE_DIR / "docs"
 INDEX_PATH = DOCS_DIR / "index.html"
@@ -220,10 +213,10 @@ TEMPLATE = r"""<!DOCTYPE html>
       real neighbourhood values and trends, and estimate property prices.
     </p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="__LIVE_APP_URL__" target="_blank" rel="noopener">🚀 Launch live app</a>
+      <a class="btn btn-primary" href="#run" target="_self">▶ Run the app</a>
       <a class="btn btn-outline" href="__REPO_URL__" target="_blank" rel="noopener">View source</a>
     </div>
-    <p class="cta-note">Live predictor on Streamlit Community Cloud · charts below are interactive.</p>
+    <p class="cta-note">This page is a live preview; run the full app locally or with Docker.</p>
   </div>
 </section>
 
@@ -288,19 +281,27 @@ TEMPLATE = r"""<!DOCTYPE html>
     <span class="pill">pandas</span>
     <span class="pill">Zillow Research</span>
     <span class="pill">pytest</span>
+    <span class="pill">Docker</span>
     <span class="pill">GitHub Actions</span>
   </div>
   <p class="section-lede" style="margin-top:16px">
     Market values: Zillow Research ZHVI (monthly, latest published month). Listing-level
     features are synthesised and calibrated to real neighbourhood medians.
   </p>
-  <div class="code-card">
+  <div class="code-card" id="run">
     <div class="code-title">Run locally</div>
     <pre><code>git clone __REPO_URL__.git
 cd Property-Price-Market-Dashboard
 python3 -m venv .venv &amp;&amp; source .venv/bin/activate
 pip install -r requirements.txt
 streamlit run app.py</code></pre>
+  </div>
+  <div class="code-card">
+    <div class="code-title">Run with Docker (self-contained, no external hosting)</div>
+    <pre><code>docker build -t property-insights .
+docker run --rm -p 8501:8501 property-insights
+# fully offline (committed snapshot, no outbound calls):
+docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
   </div>
 </section>
 
@@ -326,7 +327,6 @@ def render_page(
     median_metro = summary["latest_value"].median()
     replacements = {
         "__PLOTLY_CDN__": plotly_js_cdn(),
-        "__LIVE_APP_URL__": LIVE_APP_URL or REPO_URL,
         "__REPO_URL__": REPO_URL,
         "__MARKETS__": f"{df['market'].nunique()}",
         "__LOCATIONS__": f"{df['neighborhood'].nunique()}",
@@ -373,7 +373,6 @@ def main() -> None:
     print(f"Markets       : {summary.shape[0]}")
     print(f"Listings      : {len(data):,}")
     print(f"R2 / MAPE     : {metrics.get('r2', 0):.3f} / {metrics.get('mape', 0):.2f}%")
-    print(f"Live app URL  : {LIVE_APP_URL or '(not set - buttons link to GitHub)'}")
 
 
 if __name__ == "__main__":

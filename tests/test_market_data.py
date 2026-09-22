@@ -103,3 +103,11 @@ def test_get_market_data_falls_back_to_snapshot(monkeypatch) -> None:
     assert data["fetched_at"] is not None
     assert "gross_yield_pct" in data["summary"].columns
     assert (data["summary"]["gross_yield_pct"] > 0).all()
+
+
+def test_offline_mode_uses_snapshot(monkeypatch) -> None:
+    """``RPE_OFFLINE`` must bypass the network entirely."""
+    monkeypatch.setattr(market_data.config, "OFFLINE", True)
+    data = market_data.get_market_data(force_refresh=True)
+    assert data["source"] == "snapshot"
+    assert not data["summary"].empty

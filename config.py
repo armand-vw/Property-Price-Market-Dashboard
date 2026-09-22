@@ -51,6 +51,16 @@ REFERENCE_YEAR: int = 2024
 #: resource-limited hosts. Override via the ``RPE_N_JOBS`` environment variable.
 N_JOBS: int = int(os.environ.get("RPE_N_JOBS", min(4, os.cpu_count() or 1)))
 
+
+def _env_flag(name: str) -> bool:
+    """Return ``True`` when an environment variable is set to a truthy value."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+#: When set (``RPE_OFFLINE=1``) the app never calls the network and serves the
+#: committed Zillow snapshot instead - useful for air-gapped or reproducible runs.
+OFFLINE: bool = _env_flag("RPE_OFFLINE")
+
 # --------------------------------------------------------------------------- #
 # Live market data
 # --------------------------------------------------------------------------- #
