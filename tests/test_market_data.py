@@ -65,10 +65,41 @@ def test_get_synthetic_anchors() -> None:
     assert anchors["base_price_per_sqft"].between(20, 2_000).all()
 
 
+def test_load_market_rents() -> None:
+    rents = market_data.load_market_rents()
+    assert {"market_id", "month", "value"}.issubset(rents.columns)
+    assert (rents["value"] > 0).all()
+    assert rents["market_id"].nunique() == config.TOP_N_MARKETS
+
+
+def test_merge_rents_adds_yield() -> None:
+    markets = market_data.load_markets()
+    summary = market_data.build_market_summary(markets, market_data.load_market_history())
+    merged = market_data.merge_rents(summary, market_data.load_market_rents())
+
+    assert {"latest_rent", "rent_yoy_pct", "gross_yield_pct"}.issubset(merged.columns)
+    assert (merged["latest_rent"] > 0).all()
+    assert merged["gross_yield_pct"].between(0.5, 20).all()
+    # Yield is annual rent over home value.
+    expected = merged["latest_rent"] * 12 / merged["latest_value"] * 100
+    np.testing.assert_allclose(merged["gross_yield_pct"], expected)
+
+
+def test_merge_rents_handles_empty() -> None:
+    markets = market_data.load_markets()
+    summary = market_data.build_market_summary(markets, market_data.load_market_history())
+    merged = market_data.merge_rents(summary, pd.DataFrame(columns=["market_id", "month", "value"]))
+    assert merged["gross_yield_pct"].isna().all()
+
+
 def test_get_market_data_falls_back_to_snapshot(monkeypatch) -> None:
-    """When the live fetch fails, the committed snapshot must be used."""
+    """When live fetches fail, the committed snapshot must be used."""
     monkeypatch.setattr(market_data, "fetch_live_metro_history", lambda **_: None)
+    monkeypatch.setattr(market_data, "fetch_live_metro_rents", lambda **_: None)
     data = market_data.get_market_data(force_refresh=True)
+
     assert data["source"] == "snapshot"
     assert not data["summary"].empty
-    assert isinstance(data["history"], pd.DataFrame)
+    assert data["fetched_at"] is not None
+    assert "gross_yield_pct" in data["summary"].columns
+    assert (data["summary"]["gross_yield_pct"] > 0).all()

@@ -135,6 +135,22 @@ def select_markets(metro: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
     return markets, history.sort_values(["market_id", "month"]).reset_index(drop=True)
 
 
+def select_rents(zori: pd.DataFrame, markets: pd.DataFrame) -> pd.DataFrame:
+    """Reduce the metro ZORI (rent) file to the chosen markets (long format)."""
+    market_ids = set(markets["market_id"].tolist())
+    months = month_columns(list(zori.columns))[-config.RENT_HISTORY_MONTHS :]
+
+    ours = zori[zori["RegionID"].astype(int).isin(market_ids)].copy()
+    ours["market_id"] = ours["RegionID"].astype(int)
+    long = ours.melt(
+        id_vars=["market_id"],
+        value_vars=months,
+        var_name="month",
+        value_name="value",
+    ).dropna(subset=["value"])
+    return long.sort_values(["market_id", "month"]).reset_index(drop=True)
+
+
 def select_neighborhoods(
     raw_path: Path,
     markets: pd.DataFrame,
@@ -254,7 +270,7 @@ def main() -> None:
     print("Building Zillow market snapshot")
     print("=" * 62)
 
-    print("[1/3] Metro home values")
+    print("[1/4] Metro home values")
     metro_path = download(config.ZILLOW_METRO_ZHVI_URL, cache_dir / "metro_zhvi.csv", args.redownload)
     metro = pd.read_csv(metro_path, low_memory=False)
     markets, market_history = select_markets(metro)
@@ -262,7 +278,12 @@ def main() -> None:
     market_history.to_csv(config.MARKET_HISTORY_PATH, index=False)
     print(f"  selected {len(markets)} metros: {', '.join(markets['market'].head(5))}, ...")
 
-    print("[2/3] Neighbourhood home values")
+    print("[2/4] Metro rents")
+    rents_path = download(config.ZILLOW_METRO_ZORI_URL, cache_dir / "metro_zori.csv", args.redownload)
+    rents = select_rents(pd.read_csv(rents_path, low_memory=False), markets)
+    rents.to_csv(config.MARKET_RENTS_PATH, index=False)
+
+    print("[3/4] Neighbourhood home values")
     hood_path = download(
         config.ZILLOW_NEIGHBORHOOD_ZHVI_URL,
         cache_dir / "neighborhood_zhvi.csv",
@@ -272,16 +293,18 @@ def main() -> None:
     hood_meta.to_csv(config.NEIGHBORHOOD_META_PATH, index=False)
     hood_history.to_csv(config.NEIGHBORHOOD_HISTORY_PATH, index=False)
 
-    print("[3/3] Done")
+    print("[4/4] Done")
     print("-" * 62)
     print(f"Markets              : {len(markets)}")
     print(f"Market history rows  : {len(market_history):,}")
+    print(f"Rent history rows    : {len(rents):,}")
     print(f"Neighborhoods        : {len(hood_meta)}")
     print(f"Hood history rows    : {len(hood_history):,}")
     print(f"Snapshot directory   : {config.MARKET_DATA_DIR}")
     for path in (
         config.MARKETS_PATH,
         config.MARKET_HISTORY_PATH,
+        config.MARKET_RENTS_PATH,
         config.NEIGHBORHOOD_META_PATH,
         config.NEIGHBORHOOD_HISTORY_PATH,
     ):

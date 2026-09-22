@@ -144,6 +144,25 @@ def build_market_growth(history: pd.DataFrame, summary: pd.DataFrame, top_n: int
     return fig_to_html(style_fig(fig, 460))
 
 
+def build_rental_yield(summary: pd.DataFrame) -> str:
+    """Horizontal bar of gross rental yield across all markets."""
+    frame = summary.dropna(subset=["gross_yield_pct"]).sort_values("gross_yield_pct")
+    fig = px.bar(
+        frame,
+        x="gross_yield_pct",
+        y="market",
+        orientation="h",
+        text="gross_yield_pct",
+        labels={"gross_yield_pct": "Gross rental yield (%)", "market": ""},
+        color="gross_yield_pct",
+        color_continuous_scale=["#BAE6FD", config.COLORS["accent"]],
+    )
+    fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside", cliponaxis=False)
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_xaxes(ticksuffix="%")
+    return fig_to_html(style_fig(fig, 520))
+
+
 def build_feature_importance(importance: pd.DataFrame) -> str:
     """Horizontal bar chart of aggregated feature importances."""
     frame = importance.sort_values("importance")
@@ -218,7 +237,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <section class="features">
   <h2>What it does</h2>
   <div class="grid grid-3">
-    <div class="card"><div class="icon">🌎</div><h3>Live market data</h3><p>Real median home values and trends for the 15 largest US metros, fetched from Zillow Research and refreshed automatically.</p></div>
+    <div class="card"><div class="icon">🌎</div><h3>Live market data</h3><p>Real median home values, rents and trends for the 15 largest US metros, fetched from Zillow Research and refreshed automatically.</p></div>
     <div class="card"><div class="icon">📍</div><h3>Real neighborhoods</h3><p>Explore actual neighbourhood home values within each market, with a committed snapshot for offline reliability.</p></div>
     <div class="card"><div class="icon">🎯</div><h3>Live valuation</h3><p>Configure a property and get an instant estimate with an empirical valuation range and neighbourhood comparison.</p></div>
     <div class="card"><div class="icon">🧠</div><h3>Explainable model</h3><p>XGBoost with aggregated feature importances, predicted-vs-actual parity and residual diagnostics.</p></div>
@@ -233,8 +252,9 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="chart-card"><h3>Median Home Value by Market</h3><p class="muted">Latest published month across the 15 largest US metros.</p><div class="chart">__CHART_VALUES__</div></div>
   <div class="grid grid-2">
     <div class="chart-card"><h3>10-Year Value Growth</h3><p class="muted">Home values indexed to 100 ten years ago — the biggest metros compared.</p><div class="chart">__CHART_GROWTH__</div></div>
-    <div class="chart-card"><h3>What Drives Home Prices</h3><p class="muted">Aggregated XGBoost gain importance.</p><div class="chart">__CHART_IMPORTANCE__</div></div>
+    <div class="chart-card"><h3>Gross Rental Yield by Market</h3><p class="muted">Annual median rent (ZORI) as a percentage of median home value (ZHVI).</p><div class="chart">__CHART_YIELD__</div></div>
   </div>
+  <div class="chart-card"><h3>What Drives Home Prices</h3><p class="muted">Aggregated XGBoost gain importance.</p><div class="chart">__CHART_IMPORTANCE__</div></div>
 </section>
 
 <section id="model" class="section">
@@ -322,6 +342,7 @@ def render_page(
         "__TOP_DRIVERS__": html.escape(top_drivers),
         "__CHART_VALUES__": build_market_values(summary),
         "__CHART_GROWTH__": build_market_growth(history, summary),
+        "__CHART_YIELD__": build_rental_yield(summary),
         "__CHART_IMPORTANCE__": build_feature_importance(importance),
         "__GENERATED_AT__": datetime.now(timezone.utc).strftime("%b %Y"),
     }

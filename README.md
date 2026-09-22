@@ -10,10 +10,11 @@ An end-to-end, production-style machine-learning application that estimates
 property values and surfaces **live US market insights** across the 15 largest
 metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 
-> **Data:** market values and trends are **real monthly data from
-> [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI), fetched live
-> from the public CDN with a committed snapshot fallback. Listing-level features
-> are synthesised and calibrated to each neighbourhood's real median value.
+> **Data:** market values, rents and trends are **real monthly data from
+> [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI home values,
+> ZORI rents), fetched live from the public CDN with a committed snapshot
+> fallback. Listing-level features are synthesised and calibrated to each
+> neighbourhood's real median value.
 
 ---
 
@@ -34,13 +35,17 @@ live estimation runs on Streamlit Community Cloud ([`app.py`](app.py)).
 
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
   Dallas, Houston, Washington DC, Philadelphia, Miami, Atlanta, Boston, Phoenix,
-  San Francisco, Riverside, Detroit, Seattle) — real monthly median home values,
-  MoM / YoY / 5-year changes and 10-year trends.
+  San Francisco, Riverside, Detroit, Seattle) — real monthly median home values
+  **and rents**, with MoM / YoY / 5-year changes, 10-year trends and gross
+  rental yield.
 - **Real neighbourhood values** — each market carries its actual neighbourhoods
   and their median values from a compact committed snapshot (the raw file is
   ~100 MB; it is reduced at build time).
+- **Shareable URLs** — the selected market, location and estimate inputs are
+  reflected in the URL query string, so any view can be bookmarked or linked.
 - **Resilient data layer** — live Zillow fetch with a 24-hour cache, disk
-  caching and automatic fallback to the committed snapshot if the network fails.
+  caching, a manual **Refresh** button, an automatic monthly GitHub Actions
+  refresh, and fallback to the committed snapshot if the network fails.
 - **Market-anchored valuation model** — synthetic listings calibrated to real
   neighbourhood price-per-sqft, so estimates track local price levels
   (San Francisco ≫ Detroit) while retaining rich features (beds, baths, size,
@@ -66,6 +71,7 @@ Property-Price-Market-Dashboard/
 ├── market_data/                 # Committed real-market snapshot (small)
 │   ├── markets.csv              # 15 metros
 │   ├── market_history.csv       # monthly metro home values
+│   ├── market_rents.csv         # monthly metro rents (ZORI)
 │   ├── neighborhood_meta.csv    # neighbourhood values + price anchors
 │   └── neighborhood_history.csv # monthly neighbourhood home values
 ├── scripts/
@@ -73,7 +79,9 @@ Property-Price-Market-Dashboard/
 │   └── build_site.py            # Renders the GitHub Pages site into docs/
 ├── docs/                        # GitHub Pages landing page (static)
 ├── tests/                       # pytest suite (offline)
-├── .github/workflows/ci.yml     # CI: pytest on push / PR
+├── .github/workflows/
+│   ├── ci.yml                   # CI: pytest on push / PR
+│   └── refresh-market-data.yml  # Monthly Zillow snapshot refresh
 ├── requirements.txt             # Pinned dependencies
 ├── runtime.txt                  # Python version for Streamlit Cloud
 ├── data/                        # Generated CSV + fetch cache (git-ignored)
@@ -129,7 +137,10 @@ home value) by geography. The app:
    file once and reduces it to the 15 markets × top 12 neighbourhoods.
 
 For each market the app derives the latest median value, month-over-month,
-year-over-year and 5-year changes, and a 10-year trend.
+year-over-year and 5-year changes, a 10-year trend, and — from the ZORI rent
+series — the median rent and **gross rental yield** (annual rent ÷ home value).
+A **Refresh** button re-fetches live data on demand, and a scheduled GitHub
+Actions workflow rebuilds the committed snapshot monthly.
 
 ### 2. Market-anchored synthesis (`data_loader.py`)
 
@@ -197,9 +208,9 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 
 - **Executive KPI row** — listings, the selected market's **real** median value
   and YoY, model accuracy (100 − MAPE) and R².
-- **🌎 Markets** — live median value, MoM/YoY/5-year changes, a 10-year value
-  trend, latest-value and YoY comparison across all 15 markets, and a real
-  neighbourhood value table.
+- **🌎 Markets** — live median value, MoM/YoY/5-year changes, rent and gross
+  rental yield, a 10-year value trend, latest-value / YoY / yield comparison
+  across all 15 markets, and a real neighbourhood value table.
 - **📊 Market Analytics** — price-per-sqft scatter by location (colour-coded by
   age band), median listing price by location, and feature importances.
 - **🤖 Model Insights** — metric cards, predicted-vs-actual parity and residual
@@ -207,9 +218,13 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 - **🗂️ Data Explorer** — neighbourhood market summary, filterable listings and
   CSV export.
 - **🎯 Live Valuation Tool (sidebar)** — pick a market and location, set the
-  property details and press **Estimate Value** to get the estimate, an
-  empirical valuation range, and a comparison against the **real** neighbourhood
-  median.
+  property details (including lot size) and press **Estimate Value** to get the
+  estimate, an empirical valuation range, and a comparison against the **real**
+  neighbourhood median.
+- **🔗 Shareable URLs** — the current market, location and inputs are encoded in
+  the URL; copy the link from the sidebar to share or bookmark a view.
+- **📡 Data status** — the sidebar shows whether market data is `live` or from
+  the snapshot, when it was fetched, and a **Refresh** button.
 
 ---
 
@@ -246,7 +261,7 @@ feature-importance aggregation and inference ranges.
 
 ## 🗺️ Roadmap
 
-- [ ] Add rents (ZORI) and gross rental yield per market.
+- [x] Add rents (ZORI) and gross rental yield per market.
 - [ ] Add inventory, days-on-market and sale-to-list metrics.
 - [ ] Swap synthetic listings for a real listing-level dataset behind the same
       loader interface.
@@ -263,6 +278,6 @@ feature-importance aggregation and inference ranges.
 
 Released under the MIT License.
 
-Market data © [Zillow](https://www.zillow.com/research/data/) (ZHVI), used under
-their public research terms. Listing-level estimates are illustrative and do not
-constitute financial advice.
+Market data © [Zillow](https://www.zillow.com/research/data/) (ZHVI home values
+and ZORI rents), used under their public research terms. Listing-level estimates
+are illustrative and do not constitute financial advice.

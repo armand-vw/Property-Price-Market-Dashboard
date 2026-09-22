@@ -16,6 +16,8 @@ Run with::
 
 from __future__ import annotations
 
+from urllib.parse import urlencode
+
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -155,6 +157,93 @@ def market_short_name(market: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# Query-parameter state (shareable URLs)
+# --------------------------------------------------------------------------- #
+#: Query-param name -> session-state key for the estimator inputs.
+_SHARE_PARAMS: dict[str, str] = {
+    "market": "market_select",
+    "location": "location_select",
+    "sqft": "sqft_input",
+    "beds": "beds_input",
+    "baths": "baths_input",
+    "year": "year_input",
+    "garage": "garage_input",
+    "lot": "lot_input",
+    "pool": "pool_input",
+}
+
+_NUMERIC_DEFAULTS: dict[str, float] = {
+    "sqft_input": 2_000,
+    "beds_input": 3,
+    "baths_input": 2.0,
+    "year_input": 2005,
+    "garage_input": 2,
+    "lot_input": 7_000,
+}
+
+#: Session-state key -> query-param name (inverse of :data:`_SHARE_PARAMS`).
+_PARAM_FOR_KEY: dict[str, str] = {key: param for param, key in _SHARE_PARAMS.items()}
+
+
+def seed_market_from_query(summary: pd.DataFrame) -> None:
+    """Seed the market selector from ``?market=`` on first load."""
+    if "market_select" in st.session_state:
+        return
+    names = list(summary.sort_values("size_rank")["market"])
+    wanted = st.query_params.get("market")
+    st.session_state["market_select"] = wanted if wanted in names else names[0]
+
+
+def seed_inputs_from_query(hoods: pd.DataFrame, market_df: pd.DataFrame) -> None:
+    """Seed location and property inputs from query params (once)."""
+    options = [
+        loc
+        for loc in hoods.sort_values("latest_value", ascending=False)["location"]
+        if loc in set(market_df["neighborhood"])
+    ]
+    if not options:
+        return
+
+    if st.session_state.get("location_select") not in options:
+        wanted = st.query_params.get("location")
+        st.session_state["location_select"] = wanted if wanted in options else options[0]
+
+    for key, default in _NUMERIC_DEFAULTS.items():
+        if key in st.session_state:
+            continue
+        raw = st.query_params.get(_PARAM_FOR_KEY[key])
+        try:
+            st.session_state[key] = type(default)(raw) if raw not in (None, "") else default
+        except (TypeError, ValueError):
+            st.session_state[key] = default
+
+    if "pool_input" not in st.session_state:
+        raw = st.query_params.get("pool")
+        st.session_state["pool_input"] = str(raw).lower() in {"1", "true", "yes"} if raw else False
+
+
+def sync_query_params() -> None:
+    """Mirror the current selections into the URL query string."""
+    for param, key in _SHARE_PARAMS.items():
+        if key not in st.session_state:
+            continue
+        value = st.session_state[key]
+        if param == "pool":
+            st.query_params[param] = "1" if value else "0"
+        else:
+            st.query_params[param] = str(value)
+
+
+def share_url() -> str:
+    """Build the full shareable URL for the current state."""
+    base = (getattr(st.context, "url", "") or "").split("?")[0]
+    query = urlencode(st.query_params.to_dict())
+    if not base:
+        return f"?{query}" if query else ""
+    return f"{base}?{query}" if query else base
+
+
+# --------------------------------------------------------------------------- #
 # Data & model loading (cached)
 # --------------------------------------------------------------------------- #
 @st.cache_data(show_spinner="Generating and preparing the housing dataset...")
@@ -170,9 +259,9 @@ def get_model() -> tuple:
 
 
 @st.cache_data(ttl=3600, show_spinner="Loading market data...")
-def get_market_overview() -> dict:
+def get_market_overview(force_refresh: bool = False) -> dict:
     """Load live market values (cached; falls back to the committed snapshot)."""
-    return market_data.get_market_data()
+    return market_data.get_market_data(force_refresh=force_refresh)
 
 
 @st.cache_data(show_spinner=False)
@@ -215,19 +304,20 @@ def get_age_banded_data(df: pd.DataFrame) -> pd.DataFrame:
 # --------------------------------------------------------------------------- #
 # Sidebar
 # --------------------------------------------------------------------------- #
-def render_market_selector(summary: pd.DataFrame) -> pd.Series:
+def render_market_selector(summary: pd.DataFrame, source: str, fetched_at) -> pd.Series:
     """Render the global market selector and return the selected market row."""
     st.sidebar.markdown("### 🌎 Market")
     options = summary.sort_values("size_rank")
-    label_to_row = {
-        f"{row.market}": row for row in options.itertuples(index=False)
-    }
+    label_to_row = {row.market: row for row in options.itertuples(index=False)}
     choice = st.sidebar.selectbox(
         "Select a market",
-        options=list(label_to_row.keys()),
-        index=0,
-        help="Values are live monthly Zillow Research data (ZHVI).",
+        options=list(label_to_row),
+        key="market_select",
+        help="Values are live monthly Zillow Research data (ZHVI home values, ZORI rents).",
     )
+    badge = "🟢 live" if source == "live" else "🟡 snapshot"
+    stamp = fetched_at.strftime("%d %b %H:%M") if hasattr(fetched_at, "strftime") else "—"
+    st.sidebar.caption(f"Source: {badge} · updated {stamp} UTC")
     return label_to_row[choice]
 
 
@@ -293,27 +383,41 @@ def render_prediction_tool(
     numeric_bounds = config.FEATURE_BOUNDS
 
     with st.sidebar.form("valuation_form", clear_on_submit=False):
-        neighborhood = st.selectbox("Location", options=locations, index=0)
+        neighborhood = st.selectbox("Location", options=locations, key="location_select")
         sqft = st.slider(
             "Living area (sq ft)",
             min_value=int(numeric_bounds["sqft"][0]),
             max_value=int(numeric_bounds["sqft"][1]),
-            value=2_000,
             step=50,
+            key="sqft_input",
         )
         col_a, col_b = st.columns(2)
         with col_a:
-            bedrooms = st.number_input("Bedrooms", min_value=1, max_value=6, value=3, step=1)
+            bedrooms = st.number_input(
+                "Bedrooms", min_value=1, max_value=6, step=1, key="beds_input"
+            )
         with col_b:
-            bathrooms = st.number_input("Bathrooms", min_value=1.0, max_value=5.0, value=2.0, step=0.5)
+            bathrooms = st.number_input(
+                "Bathrooms", min_value=1.0, max_value=5.0, step=0.5, key="baths_input"
+            )
         col_c, col_d = st.columns(2)
         with col_c:
             year_built = st.number_input(
-                "Year built", min_value=1900, max_value=config.REFERENCE_YEAR, value=2005, step=1
+                "Year built", min_value=1900, max_value=config.REFERENCE_YEAR,
+                step=1, key="year_input",
             )
         with col_d:
-            garage_spaces = st.number_input("Garage spaces", min_value=0, max_value=3, value=2, step=1)
-        has_pool = st.toggle("Swimming pool", value=False)
+            garage_spaces = st.number_input(
+                "Garage spaces", min_value=0, max_value=3, step=1, key="garage_input"
+            )
+        lot_size = st.slider(
+            "Lot size (sq ft)",
+            min_value=int(numeric_bounds["lot_size"][0]),
+            max_value=int(numeric_bounds["lot_size"][1]),
+            step=250,
+            key="lot_input",
+        )
+        has_pool = st.toggle("Swimming pool", key="pool_input")
 
         submitted = st.form_submit_button("Estimate Value", width="stretch", type="primary")
 
@@ -324,13 +428,20 @@ def render_prediction_tool(
             "bedrooms": int(bedrooms),
             "bathrooms": float(bathrooms),
             "sqft": int(sqft),
-            "lot_size": float(max(sqft * 3.5, numeric_bounds["lot_size"][0])),
+            "lot_size": float(lot_size),
             "year_built": int(year_built),
             "has_pool": bool(has_pool),
             "garage_spaces": int(garage_spaces),
         }
         st.session_state["prediction"] = model_lib.predict_with_range(model, features, metrics)
         st.session_state["prediction_features"] = features
+
+    sync_query_params()
+    link = share_url()
+    if link:
+        with st.sidebar.expander("🔗 Shareable link"):
+            st.code(link, language=None)
+            st.caption("Copy this URL to restore this market, location and estimate.")
 
     estimate = st.session_state.get("prediction")
     if not estimate:
@@ -400,6 +511,18 @@ def render_markets_tab(
         kpi_card("5-Year Change", f"{market_row.change_5y_pct:+.1f}%", "Since five years ago")
     with col_4:
         kpi_card("Month over Month", f"{market_row.mom_pct:+.2f}%", "Latest monthly move")
+
+    rent_1, rent_2, rent_3, rent_4 = st.columns(4)
+    with rent_1:
+        if pd.notna(market_row.latest_rent):
+            kpi_card("Median Rent", f"${market_row.latest_rent:,.0f}/mo", f"{market_row.rent_yoy_pct:+.1f}% YoY (ZORI)")
+        else:
+            kpi_card("Median Rent", "n/a", "Rent data unavailable")
+    with rent_2:
+        if pd.notna(market_row.gross_yield_pct):
+            kpi_card("Gross Rental Yield", f"{market_row.gross_yield_pct:.1f}%", "Annual rent ÷ home value")
+        else:
+            kpi_card("Gross Rental Yield", "n/a", "Rent data unavailable")
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
@@ -476,6 +599,32 @@ def render_markets_tab(
         growth.update_xaxes(ticksuffix="%")
         growth = style_figure(growth, height=460)
         st.plotly_chart(growth, width="stretch")
+
+    st.markdown("#### Gross Rental Yield — All Markets")
+    st.caption("Annual median rent (ZORI) as a percentage of median home value (ZHVI).")
+    yield_frame = summary.dropna(subset=["gross_yield_pct"]).sort_values("gross_yield_pct")
+    if not yield_frame.empty:
+        yield_colors = [
+            config.COLORS["accent"]
+            if mid == market_row.market_id
+            else "#BAE6FD"
+            for mid in yield_frame["market_id"]
+        ]
+        yield_chart = go.Figure(
+            go.Bar(
+                x=yield_frame["gross_yield_pct"],
+                y=yield_frame["market"],
+                orientation="h",
+                marker_color=yield_colors,
+                text=[f"{v:.1f}%" for v in yield_frame["gross_yield_pct"]],
+                textposition="outside",
+                cliponaxis=False,
+                hovertemplate="%{y}<br>%{x:.2f}%<extra></extra>",
+            )
+        )
+        yield_chart.update_xaxes(ticksuffix="%")
+        yield_chart = style_figure(yield_chart, height=460)
+        st.plotly_chart(yield_chart, width="stretch")
 
     st.markdown(f"#### Neighborhood Home Values — {market_row.market}")
     table = hoods.sort_values("latest_value", ascending=False)[
@@ -696,28 +845,42 @@ def main() -> None:
 
     data = get_data()
     model, metrics, importance = get_model()
-    overview = get_market_overview()
+    hood_meta = get_hood_meta()
+
+    # --- Sidebar: market data status + manual refresh --------------------- #
+    st.sidebar.markdown("### 📡 Market Data")
+    force_refresh = st.sidebar.button(
+        "🔄 Refresh market data",
+        width="stretch",
+        help="Re-fetch the latest Zillow data now, bypassing the 24-hour cache.",
+    )
+    if force_refresh:
+        get_market_overview.clear()
+
+    overview = get_market_overview(force_refresh)
     summary = overview["summary"]
     history = overview["history"]
     source = overview["source"]
-    hood_meta = get_hood_meta()
+    fetched_at = overview["fetched_at"]
 
     st.markdown(
         """
         <div class="hero">
             <h1>🏙️ Real Estate Price Estimator &amp; Market Insights</h1>
             <p>Live US market data · gradient-boosted valuation · interactive analytics</p>
-            <span class="live-badge">Market values: Zillow Research (monthly ZHVI)</span>
+            <span class="live-badge">Market values &amp; rents: Zillow Research (monthly ZHVI / ZORI)</span>
         </div>
         """,
         unsafe_allow_html=True,
     )
 
-    # --- Sidebar ---------------------------------------------------------- #
-    market_row = render_market_selector(summary)
+    # --- Sidebar: market + scoped filters + estimator --------------------- #
+    seed_market_from_query(summary)
+    market_row = render_market_selector(summary, source, fetched_at)
     market = market_row.market
     market_df = data[data["market"] == market]
     hoods = hood_meta[hood_meta["market_id"] == market_row.market_id]
+    seed_inputs_from_query(hoods, market_df)
 
     filtered = render_filters(data, market, hoods)
     render_prediction_tool(model, metrics, market_row, hoods, market_df)

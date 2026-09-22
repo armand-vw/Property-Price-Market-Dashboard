@@ -32,6 +32,7 @@ MARKETS_PATH: Path = MARKET_DATA_DIR / "markets.csv"
 MARKET_HISTORY_PATH: Path = MARKET_DATA_DIR / "market_history.csv"
 NEIGHBORHOOD_META_PATH: Path = MARKET_DATA_DIR / "neighborhood_meta.csv"
 NEIGHBORHOOD_HISTORY_PATH: Path = MARKET_DATA_DIR / "neighborhood_history.csv"
+MARKET_RENTS_PATH: Path = MARKET_DATA_DIR / "market_rents.csv"
 
 # Runtime cache for live Zillow fetches.
 MARKET_CACHE_DIR: Path = DATA_DIR / "cache"
@@ -64,7 +65,13 @@ ZILLOW_NEIGHBORHOOD_ZHVI_URL: str = (
     "https://files.zillowstatic.com/research/public_csvs/zhvi/"
     "Neighborhood_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv"
 )
-ZILLOW_ATTRIBUTION: str = "Market data: Zillow Research (ZHVI), latest published month."
+ZILLOW_METRO_ZORI_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/zori/"
+    "Metro_zori_uc_sfrcondomfr_sm_month.csv"
+)
+ZILLOW_ATTRIBUTION: str = (
+    "Market data: Zillow Research (ZHVI home values, ZORI rents), latest published month."
+)
 
 #: How many of the largest US metros to expose in the market selector.
 TOP_N_MARKETS: int = 15
@@ -73,6 +80,7 @@ NEIGHBORHOODS_PER_MARKET: int = 12
 #: Months of history kept in the committed snapshot.
 MARKET_HISTORY_MONTHS: int = 180
 NEIGHBORHOOD_HISTORY_MONTHS: int = 120
+RENT_HISTORY_MONTHS: int = 60
 #: Hours a live fetch is cached on disk before being refreshed.
 MARKET_CACHE_TTL_HOURS: int = 24
 #: Network timeout (seconds) for Zillow fetches.
