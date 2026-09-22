@@ -18,8 +18,12 @@ from data_loader import clean_data, generate_synthetic_data
 
 @pytest.fixture(scope="session")
 def raw_df() -> pd.DataFrame:
-    """A small raw (uncleaned) synthetic dataset shared across the test session."""
-    return generate_synthetic_data(n_records=500, seed=7)
+    """A small raw (uncleaned) synthetic dataset shared across the test session.
+
+    Two listings per neighbourhood keeps the suite fast while still exercising
+    every market and location category.
+    """
+    return generate_synthetic_data(listings_per_neighborhood=2, seed=7)
 
 
 @pytest.fixture(scope="session")
@@ -32,7 +36,8 @@ def clean_df(raw_df: pd.DataFrame) -> pd.DataFrame:
 def single_property() -> dict:
     """A representative property feature dictionary for inference tests."""
     return {
-        "neighborhood": "Riverside",
+        "market": "Atlanta, GA",
+        "neighborhood": "Druid Hills (Atlanta)",
         "bedrooms": 3,
         "bathrooms": 2.0,
         "sqft": 2_000,

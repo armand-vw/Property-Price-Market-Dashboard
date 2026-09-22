@@ -3,17 +3,16 @@ scripts/build_site.py
 =====================
 Generate the static GitHub Pages landing page in ``docs/``.
 
-The page is *not* a screenshot - it embeds real, interactive Plotly figures
-rendered from the actual cleaned dataset and trained pipeline, so it stays in
-sync with the project. The live prediction tool lives on Streamlit Community
-Cloud and is linked from the page.
+The page embeds real, interactive Plotly figures built from live/committed
+Zillow market data and the trained pipeline, so it stays in sync with the
+project. The live prediction tool runs on Streamlit Community Cloud and is
+linked from the page.
 
 Usage
 -----
     python scripts/build_site.py
 
-To point the "Launch live app" buttons at your deployed app::
-
+    # point the "Launch live app" buttons at your deployment:
     LIVE_APP_URL=https://your-app.streamlit.app python scripts/build_site.py
 """
 
@@ -25,22 +24,19 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-# Make the project root importable when run as ``python scripts/build_site.py``.
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
-if str(PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(PROJECT_ROOT))
-
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 
-import config
-from data_loader import get_neighborhood_stats, load_or_create_data
-from model import ensure_model
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-# --------------------------------------------------------------------------- #
-# Configuration
-# --------------------------------------------------------------------------- #
+import config  # noqa: E402
+import market_data  # noqa: E402
+from data_loader import load_or_create_data  # noqa: E402
+from model import ensure_model  # noqa: E402
+
 REPO_URL = "https://github.com/armand-vw/Property-Price-Market-Dashboard"
 PAGES_URL = "https://armand-vw.github.io/Property-Price-Market-Dashboard/"
 LIVE_APP_URL = os.environ.get("LIVE_APP_URL", "").strip()
@@ -98,52 +94,54 @@ def fig_to_html(fig: go.Figure) -> str:
     return fig.to_html(
         full_html=False,
         include_plotlyjs=False,
-        config={
-            "displayModeBar": False,
-            "responsive": True,
-            "displaylogo": False,
-        },
+        config={"displayModeBar": False, "responsive": True, "displaylogo": False},
     )
 
 
 # --------------------------------------------------------------------------- #
 # Figure builders
 # --------------------------------------------------------------------------- #
-def build_price_per_sqft(df: pd.DataFrame, stats: pd.DataFrame) -> str:
-    """Price per square foot by neighbourhood, coloured by age band."""
-    banded = df.copy()
-    banded["age_band"] = pd.cut(
-        banded["property_age"],
-        bins=config.AGE_BINS,
-        labels=config.AGE_LABELS,
-        include_lowest=True,
+def build_market_values(summary: pd.DataFrame) -> str:
+    """Horizontal bar of the latest median home value across all markets."""
+    frame = summary.sort_values("latest_value")
+    fig = px.bar(
+        frame,
+        x="latest_value",
+        y="market",
+        orientation="h",
+        text="latest_value",
+        labels={"latest_value": "Median home value ($)", "market": ""},
+        color="latest_value",
+        color_continuous_scale=["#C7D2FE", config.COLORS["primary"]],
     )
-    fig = px.scatter(
-        banded,
-        x="neighborhood",
-        y="price_per_sqft",
-        color="age_band",
-        category_orders={
-            "neighborhood": list(stats.index),
-            "age_band": config.AGE_LABELS,
-        },
-        color_discrete_sequence=config.CHART_SEQUENCE,
-        opacity=0.62,
-        labels={
-            "neighborhood": "",
-            "price_per_sqft": "Price per sq ft ($)",
-            "age_band": "Age band",
-        },
-        hover_data={
-            "bedrooms": True,
-            "bathrooms": True,
-            "sqft": ":,",
-            "price": ":,",
-        },
-    )
-    fig.update_traces(marker=dict(size=8, line=dict(width=0.4, color="white")))
-    fig.update_yaxes(tickprefix="$", tickformat=",")
-    return fig_to_html(style_fig(fig, 440))
+    fig.update_traces(texttemplate="%{text:$,.0f}", textposition="outside", cliponaxis=False)
+    fig.update_layout(coloraxis_showscale=False)
+    fig.update_xaxes(tickprefix="$", tickformat=",")
+    return fig_to_html(style_fig(fig, 520))
+
+
+def build_market_growth(history: pd.DataFrame, summary: pd.DataFrame, top_n: int = 6) -> str:
+    """10-year indexed home-value growth for the largest markets."""
+    top_markets = summary.sort_values("size_rank").head(top_n)
+    fig = go.Figure()
+    for color, row in zip(config.CHART_SEQUENCE, top_markets.itertuples()):
+        series = history[history["market_id"] == row.market_id].sort_values("month")
+        series = series[series["month"] >= series["month"].max() - pd.DateOffset(years=10)]
+        if series.empty:
+            continue
+        indexed = series["value"] / series["value"].iloc[0] * 100.0
+        fig.add_trace(
+            go.Scatter(
+                x=series["month"],
+                y=indexed,
+                mode="lines",
+                name=row.market.split(",")[0],
+                line=dict(width=2.5, color=color),
+                hovertemplate="%{x|%b %Y}<br>Index %{y:.1f}<extra></extra>",
+            )
+        )
+    fig.update_yaxes(title="Index (=100 ten years ago)")
+    return fig_to_html(style_fig(fig, 460))
 
 
 def build_feature_importance(importance: pd.DataFrame) -> str:
@@ -159,31 +157,8 @@ def build_feature_importance(importance: pd.DataFrame) -> str:
         color_continuous_scale=["#E0E7FF", config.COLORS["primary"]],
     )
     fig.update_layout(coloraxis_showscale=False)
-    fig.update_traces(
-        texttemplate="%{x:.3f}", textposition="outside", cliponaxis=False
-    )
-    return fig_to_html(style_fig(fig, 440))
-
-
-def build_median_price(stats: pd.DataFrame) -> str:
-    """Horizontal bar chart of median price by neighbourhood."""
-    frame = stats.reset_index().sort_values("median_price")
-    fig = px.bar(
-        frame,
-        x="median_price",
-        y="neighborhood",
-        orientation="h",
-        text="median_price",
-        labels={"median_price": "Median price ($)", "neighborhood": ""},
-        color="median_price",
-        color_continuous_scale=["#C7D2FE", config.COLORS["primary"]],
-    )
-    fig.update_traces(
-        texttemplate="%{text:$,.0f}", textposition="outside", cliponaxis=False
-    )
-    fig.update_layout(coloraxis_showscale=False)
-    fig.update_xaxes(tickprefix="$", tickformat=",")
-    return fig_to_html(style_fig(fig, 440))
+    fig.update_traces(texttemplate="%{x:.3f}", textposition="outside", cliponaxis=False)
+    return fig_to_html(style_fig(fig, 460))
 
 
 # --------------------------------------------------------------------------- #
@@ -195,9 +170,9 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Real Estate Price Estimator &amp; Market Insights Dashboard</title>
-<meta name="description" content="Interactive real-estate price estimator and market insights dashboard built with Streamlit, XGBoost, scikit-learn and Plotly." />
+<meta name="description" content="Interactive real-estate price estimator and market insights dashboard with live Zillow market data, Streamlit, XGBoost, scikit-learn and Plotly." />
 <meta property="og:title" content="Real Estate Price Estimator &amp; Market Insights" />
-<meta property="og:description" content="Gradient-boosted valuation model, interactive market analytics and a live price estimation tool." />
+<meta property="og:description" content="Live US market data, gradient-boosted valuation and a live price estimation tool." />
 <meta property="og:type" content="website" />
 <link rel="stylesheet" href="style.css" />
 <script src="__PLOTLY_CDN__"></script>
@@ -221,21 +196,21 @@ TEMPLATE = r"""<!DOCTYPE html>
     <span class="eyebrow">Machine Learning · Real Estate Analytics</span>
     <h1>Real Estate Price Estimator &amp;<br />Market Insights Dashboard</h1>
     <p class="lede">
-      An end-to-end, production-style application that estimates property values and
-      surfaces market insights. Gradient-boosted valuation, leak-free scikit-learn
-      pipelines, and interactive analytics — from data synthesis to a live dashboard.
+      An end-to-end, production-style application combining <strong>live US market data</strong>
+      from Zillow Research with a gradient-boosted valuation model. Select a market, explore
+      real neighbourhood values and trends, and estimate property prices.
     </p>
     <div class="cta-row">
       <a class="btn btn-primary" href="__LIVE_APP_URL__" target="_blank" rel="noopener">🚀 Launch live app</a>
       <a class="btn btn-outline" href="__REPO_URL__" target="_blank" rel="noopener">View source</a>
     </div>
-    <p class="cta-note">Live predictor hosted on Streamlit Community Cloud · charts below are interactive.</p>
+    <p class="cta-note">Live predictor on Streamlit Community Cloud · charts below are interactive.</p>
   </div>
 </section>
 
 <section class="kpis">
-  <div class="kpi"><span class="kpi-label">Total Listings</span><span class="kpi-value">__TOTAL_LISTINGS__</span><span class="kpi-sub">Synthetic property records</span></div>
-  <div class="kpi"><span class="kpi-label">Median Market Price</span><span class="kpi-value">__MEDIAN_PRICE__</span><span class="kpi-sub">Across all listings</span></div>
+  <div class="kpi"><span class="kpi-label">Markets Covered</span><span class="kpi-value">__MARKETS__</span><span class="kpi-sub">Largest US metros</span></div>
+  <div class="kpi"><span class="kpi-label">Median Metro Value</span><span class="kpi-value">__MEDIAN_PRICE__</span><span class="kpi-sub">Live Zillow ZHVI</span></div>
   <div class="kpi"><span class="kpi-label">Model Accuracy</span><span class="kpi-value">__ACCURACY__</span><span class="kpi-sub">100 − MAPE (__MAPE__)</span></div>
   <div class="kpi"><span class="kpi-label">R² Score</span><span class="kpi-value">__R2__</span><span class="kpi-sub">Held-out variance explained</span></div>
 </section>
@@ -243,21 +218,21 @@ TEMPLATE = r"""<!DOCTYPE html>
 <section class="features">
   <h2>What it does</h2>
   <div class="grid grid-3">
-    <div class="card"><div class="icon">📈</div><h3>Live valuation</h3><p>Configure a property — neighbourhood, size, beds, baths, age, pool, garage — and get an instant estimate with an empirical valuation range.</p></div>
-    <div class="card"><div class="icon">🧭</div><h3>Market analytics</h3><p>Explore price-per-sqft distributions, neighbourhood medians and age-band segmentation with interactive Plotly charts.</p></div>
-    <div class="card"><div class="icon">🧠</div><h3>Explainable model</h3><p>XGBoost with aggregated feature importances, predicted-vs-actual parity and residual diagnostics surfaced in the dashboard.</p></div>
+    <div class="card"><div class="icon">🌎</div><h3>Live market data</h3><p>Real median home values and trends for the 15 largest US metros, fetched from Zillow Research and refreshed automatically.</p></div>
+    <div class="card"><div class="icon">📍</div><h3>Real neighborhoods</h3><p>Explore actual neighbourhood home values within each market, with a committed snapshot for offline reliability.</p></div>
+    <div class="card"><div class="icon">🎯</div><h3>Live valuation</h3><p>Configure a property and get an instant estimate with an empirical valuation range and neighbourhood comparison.</p></div>
+    <div class="card"><div class="icon">🧠</div><h3>Explainable model</h3><p>XGBoost with aggregated feature importances, predicted-vs-actual parity and residual diagnostics.</p></div>
     <div class="card"><div class="icon">🧱</div><h3>Leak-free pipeline</h3><p>Imputation, scaling and one-hot encoding fitted inside an sklearn pipeline — never on the test set.</p></div>
-    <div class="card"><div class="icon">📉</div><h3>Honest uncertainty</h3><p>Valuation ranges come from held-out residual quantiles, not an over-confident symmetric band.</p></div>
-    <div class="card"><div class="icon">⚙️</div><h3>Production ready</h3><p>Joblib-persisted artifact, graceful Random-Forest fallback, pytest suite and CI on every push.</p></div>
+    <div class="card"><div class="icon">⚙️</div><h3>Production ready</h3><p>Joblib artifact, live-to-snapshot fallback, pytest suite and CI on every push.</p></div>
   </div>
 </section>
 
 <section id="preview" class="section">
   <h2>Interactive preview</h2>
-  <p class="section-lede">These charts are rendered from the actual dataset and trained model at build time.</p>
-  <div class="chart-card"><h3>Price per Sq Ft by Neighborhood</h3><p class="muted">Each point is a listing, colour-coded by property age band.</p><div class="chart">__CHART_PSF__</div></div>
+  <p class="section-lede">Rendered from real Zillow market data and the trained model at build time.</p>
+  <div class="chart-card"><h3>Median Home Value by Market</h3><p class="muted">Latest published month across the 15 largest US metros.</p><div class="chart">__CHART_VALUES__</div></div>
   <div class="grid grid-2">
-    <div class="chart-card"><h3>Median Price by Neighborhood</h3><p class="muted">Market tiers across the eight neighborhoods.</p><div class="chart">__CHART_MEDIAN__</div></div>
+    <div class="chart-card"><h3>10-Year Value Growth</h3><p class="muted">Home values indexed to 100 ten years ago — the biggest metros compared.</p><div class="chart">__CHART_GROWTH__</div></div>
     <div class="chart-card"><h3>What Drives Home Prices</h3><p class="muted">Aggregated XGBoost gain importance.</p><div class="chart">__CHART_IMPORTANCE__</div></div>
   </div>
 </section>
@@ -269,11 +244,11 @@ TEMPLATE = r"""<!DOCTYPE html>
     <table>
       <tbody>
         <tr><th>Estimator</th><td>__MODEL_NAME__</td></tr>
-        <tr><th>Train / Test rows</th><td>__TRAIN_TEST__</td></tr>
+        <tr><th>Training listings</th><td>__TRAIN_TEST__</td></tr>
+        <tr><th>Markets / locations</th><td>__MARKETS__ / __LOCATIONS__</td></tr>
         <tr><th>MAE</th><td><strong>__MAE__</strong></td></tr>
         <tr><th>RMSE</th><td><strong>__RMSE__</strong></td></tr>
         <tr><th>MAPE</th><td><strong>__MAPE__</strong></td></tr>
-        <tr><th>Median APE</th><td>__MEDIAN_APE__</td></tr>
         <tr><th>R² score</th><td><strong>__R2__</strong></td></tr>
         <tr><th>Improvement vs. median baseline</th><td>__BASELINE__</td></tr>
         <tr><th>Top price drivers</th><td>__TOP_DRIVERS__</td></tr>
@@ -283,7 +258,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 </section>
 
 <section id="stack" class="section">
-  <h2>Tech stack</h2>
+  <h2>Tech stack &amp; data</h2>
   <div class="pills">
     <span class="pill">Python 3.12</span>
     <span class="pill">Streamlit</span>
@@ -291,11 +266,14 @@ TEMPLATE = r"""<!DOCTYPE html>
     <span class="pill">scikit-learn</span>
     <span class="pill">Plotly</span>
     <span class="pill">pandas</span>
-    <span class="pill">NumPy</span>
-    <span class="pill">joblib</span>
+    <span class="pill">Zillow Research</span>
     <span class="pill">pytest</span>
     <span class="pill">GitHub Actions</span>
   </div>
+  <p class="section-lede" style="margin-top:16px">
+    Market values: Zillow Research ZHVI (monthly, latest published month). Listing-level
+    features are synthesised and calibrated to real neighbourhood medians.
+  </p>
   <div class="code-card">
     <div class="code-title">Run locally</div>
     <pre><code>git clone __REPO_URL__.git
@@ -307,7 +285,7 @@ streamlit run app.py</code></pre>
 </section>
 
 <footer class="footer">
-  <p>Built with Streamlit, Plotly, XGBoost &amp; scikit-learn. Synthetic data — estimates are illustrative and not financial advice.</p>
+  <p>Built with Streamlit, Plotly, XGBoost &amp; scikit-learn · Market data: Zillow Research. Estimates are illustrative and not financial advice.</p>
   <p><a href="__REPO_URL__" target="_blank" rel="noopener">Source on GitHub</a> · Generated __GENERATED_AT__</p>
 </footer>
 
@@ -318,30 +296,32 @@ streamlit run app.py</code></pre>
 
 def render_page(
     df: pd.DataFrame,
-    stats: pd.DataFrame,
+    summary: pd.DataFrame,
+    history: pd.DataFrame,
     metrics: dict,
     importance: pd.DataFrame,
 ) -> str:
     """Populate the template with data, metrics and chart fragments."""
     top_drivers = ", ".join(importance.head(4)["feature"].tolist())
+    median_metro = summary["latest_value"].median()
     replacements = {
         "__PLOTLY_CDN__": plotly_js_cdn(),
         "__LIVE_APP_URL__": LIVE_APP_URL or REPO_URL,
         "__REPO_URL__": REPO_URL,
-        "__TOTAL_LISTINGS__": f"{len(df):,}",
-        "__MEDIAN_PRICE__": money(df["price"].median()),
+        "__MARKETS__": f"{df['market'].nunique()}",
+        "__LOCATIONS__": f"{df['neighborhood'].nunique()}",
+        "__MEDIAN_PRICE__": money(median_metro),
         "__ACCURACY__": f"{100 - metrics.get('mape', 0):.1f}%",
         "__MAPE__": f"{metrics.get('mape', 0):.2f}%",
         "__R2__": f"{metrics.get('r2', 0):.3f}",
         "__MODEL_NAME__": html.escape(str(metrics.get("model_name", "Regressor"))),
-        "__TRAIN_TEST__": f"{metrics.get('n_train', 0):,} / {metrics.get('n_test', 0):,}",
+        "__TRAIN_TEST__": f"{metrics.get('n_records', 0):,}",
         "__MAE__": dollars(metrics.get("mae", 0)),
         "__RMSE__": dollars(metrics.get("rmse", 0)),
-        "__MEDIAN_APE__": f"{metrics.get('median_ape', 0):.2f}%",
         "__BASELINE__": f"{metrics.get('improvement_vs_baseline_pct', 0):.1f}% lower MAE",
         "__TOP_DRIVERS__": html.escape(top_drivers),
-        "__CHART_PSF__": build_price_per_sqft(df, stats),
-        "__CHART_MEDIAN__": build_median_price(stats),
+        "__CHART_VALUES__": build_market_values(summary),
+        "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_IMPORTANCE__": build_feature_importance(importance),
         "__GENERATED_AT__": datetime.now(timezone.utc).strftime("%b %Y"),
     }
@@ -353,20 +333,23 @@ def render_page(
 
 
 def main() -> None:
-    """Build ``docs/index.html`` from the live data and model."""
+    """Build ``docs/index.html`` from the market data and model."""
     DOCS_DIR.mkdir(parents=True, exist_ok=True)
 
     data = load_or_create_data()
-    model, metrics, importance = ensure_model(data)
-    stats = get_neighborhood_stats(data)
+    _, metrics, importance = ensure_model(data)
+    overview = market_data.get_market_data()
+    summary = overview["summary"]
+    history = overview["history"]
 
-    page = render_page(data, stats, metrics, importance)
+    page = render_page(data, summary, history, metrics, importance)
     INDEX_PATH.write_text(page, encoding="utf-8")
 
     print("=" * 62)
     print("GitHub Pages site generated")
     print("=" * 62)
     print(f"Output        : {INDEX_PATH}")
+    print(f"Markets       : {summary.shape[0]}")
     print(f"Listings      : {len(data):,}")
     print(f"R2 / MAPE     : {metrics.get('r2', 0):.3f} / {metrics.get('mape', 0):.2f}%")
     print(f"Live app URL  : {LIVE_APP_URL or '(not set - buttons link to GitHub)'}")

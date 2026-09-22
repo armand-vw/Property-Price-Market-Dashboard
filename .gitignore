@@ -18,4 +18,5 @@ __pycache__/
 
 # Generated data & model binaries (reproducible from code)
 data/*.csv
+data/cache/
 models/*.joblib

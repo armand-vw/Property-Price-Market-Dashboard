@@ -5,8 +5,8 @@ Central configuration for the Real Estate Price Estimator & Market Insights
 Dashboard.
 
 Keeping every path, random seed, palette and domain constant in one module means
-``data_loader.py``, ``model.py`` and ``app.py`` all agree on the same contract.
-Change a value here and the entire project follows.
+``market_data.py``, ``data_loader.py``, ``model.py`` and ``app.py`` all agree on
+the same contract. Change a value here and the entire project follows.
 """
 
 from __future__ import annotations
@@ -20,17 +20,26 @@ from pathlib import Path
 BASE_DIR: Path = Path(__file__).resolve().parent
 DATA_DIR: Path = BASE_DIR / "data"
 MODEL_DIR: Path = BASE_DIR / "models"
+MARKET_DATA_DIR: Path = BASE_DIR / "market_data"
 
 DATA_PATH: Path = DATA_DIR / "housing.csv"
 MODEL_PATH: Path = MODEL_DIR / "price_model.joblib"
 METRICS_PATH: Path = MODEL_DIR / "metrics.json"
 IMPORTANCE_PATH: Path = MODEL_DIR / "feature_importance.csv"
 
+# Committed real-market snapshot (produced by scripts/build_market_snapshot.py).
+MARKETS_PATH: Path = MARKET_DATA_DIR / "markets.csv"
+MARKET_HISTORY_PATH: Path = MARKET_DATA_DIR / "market_history.csv"
+NEIGHBORHOOD_META_PATH: Path = MARKET_DATA_DIR / "neighborhood_meta.csv"
+NEIGHBORHOOD_HISTORY_PATH: Path = MARKET_DATA_DIR / "neighborhood_history.csv"
+
+# Runtime cache for live Zillow fetches.
+MARKET_CACHE_DIR: Path = DATA_DIR / "cache"
+
 # --------------------------------------------------------------------------- #
 # Reproducibility
 # --------------------------------------------------------------------------- #
 RANDOM_SEED: int = 42
-N_RECORDS: int = 2_000
 TEST_SIZE: float = 0.20
 
 #: Reference year used to derive property age from ``year_built``.
@@ -42,10 +51,44 @@ REFERENCE_YEAR: int = 2024
 N_JOBS: int = int(os.environ.get("RPE_N_JOBS", min(4, os.cpu_count() or 1)))
 
 # --------------------------------------------------------------------------- #
+# Live market data
+# --------------------------------------------------------------------------- #
+# Zillow Research publishes these CSVs for public use; no API key required.
+# ``metro`` is small enough to fetch at runtime; ``neighborhood`` is ~100 MB and
+# is reduced to a committed snapshot at build time instead.
+ZILLOW_METRO_ZHVI_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/zhvi/"
+    "Metro_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv"
+)
+ZILLOW_NEIGHBORHOOD_ZHVI_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/zhvi/"
+    "Neighborhood_zhvi_uc_sfrcondo_tier_0.33_0.67_sm_sa_month.csv"
+)
+ZILLOW_ATTRIBUTION: str = "Market data: Zillow Research (ZHVI), latest published month."
+
+#: How many of the largest US metros to expose in the market selector.
+TOP_N_MARKETS: int = 15
+#: Neighbourhoods retained per market in the snapshot.
+NEIGHBORHOODS_PER_MARKET: int = 12
+#: Months of history kept in the committed snapshot.
+MARKET_HISTORY_MONTHS: int = 180
+NEIGHBORHOOD_HISTORY_MONTHS: int = 120
+#: Hours a live fetch is cached on disk before being refreshed.
+MARKET_CACHE_TTL_HOURS: int = 24
+#: Network timeout (seconds) for Zillow fetches.
+MARKET_FETCH_TIMEOUT: int = 30
+
+#: Synthetic list-price anchor: assumed median home size used to convert a
+#: real median *home value* into a price-per-square-foot anchor.
+ASSUMED_MEDIAN_SQFT: float = 2_000.0
+#: Synthetic listings generated per neighbourhood.
+LISTINGS_PER_NEIGHBORHOOD: int = 40
+
+# --------------------------------------------------------------------------- #
 # Domain schema
 # --------------------------------------------------------------------------- #
 TARGET_COLUMN: str = "price"
-CATEGORICAL_FEATURES: list[str] = ["neighborhood"]
+CATEGORICAL_FEATURES: list[str] = ["market", "neighborhood"]
 NUMERIC_FEATURES: list[str] = [
     "bedrooms",
     "bathrooms",
@@ -68,23 +111,6 @@ FEATURE_BOUNDS: dict[str, tuple[float, float]] = {
     "lot_size": (1_000, 40_000),
     "year_built": (1900, 2024),
     "garage_spaces": (0, 3),
-}
-
-# --------------------------------------------------------------------------- #
-# Synthetic neighbourhood profiles
-# --------------------------------------------------------------------------- #
-# Each neighbourhood has a base price-per-square-foot and a "prestige" multiplier
-# that captures the premium buyers pay purely for the location. Together these
-# produce realistic, spatially-clustered price tiers.
-NEIGHBORHOODS: dict[str, dict[str, float]] = {
-    "Downtown Core": {"base_psf": 465.0, "prestige": 1.10},
-    "Lakeview": {"base_psf": 435.0, "prestige": 1.07},
-    "Sunset Hills": {"base_psf": 410.0, "prestige": 1.05},
-    "Old Town": {"base_psf": 385.0, "prestige": 1.02},
-    "Riverside": {"base_psf": 360.0, "prestige": 1.00},
-    "Maple Grove": {"base_psf": 338.0, "prestige": 0.975},
-    "Cedar Park": {"base_psf": 318.0, "prestige": 0.955},
-    "Oakwood": {"base_psf": 300.0, "prestige": 0.94},
 }
 
 # --------------------------------------------------------------------------- #

@@ -7,7 +7,7 @@ Design
 ------
 A single :class:`sklearn.compose.ColumnTransformer` handles preprocessing
 (median imputation + standard scaling for numerics, mode imputation + one-hot
-encoding for the neighbourhood) and is chained into an XGBoost gradient-boosted
+encoding for the market and neighbourhood) and is chained into an XGBoost gradient-boosted
 tree regressor. The whole thing is wrapped in a
 :class:`sklearn.compose.TransformedTargetRegressor` that trains on ``log1p`` of
 the sale price and inverts the transform automatically at prediction time. This:
@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from functools import lru_cache
 from typing import Any
 
 import joblib
@@ -44,6 +45,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 import config
+import market_data
 from data_loader import load_or_create_data
 
 
@@ -293,14 +295,11 @@ def get_feature_importance(
     if len(raw_names) != len(importances):
         raise ValueError("Mismatch between feature names and importances.")
 
-    cleaned = [
-        "neighborhood" if name.startswith("categorical__neighborhood") else name
-        for name in raw_names
-    ]
-    cleaned = [name.split("__", 1)[1] if "__" in name else name for name in cleaned]
-
     frame = (
-        pd.DataFrame({"feature": cleaned, "raw_importance": importances})
+        pd.DataFrame(
+            {"feature": [_base_feature(name) for name in raw_names],
+             "raw_importance": importances}
+        )
         .groupby("feature", as_index=False)["raw_importance"]
         .sum()
         .rename(columns={"raw_importance": "importance"})
@@ -312,6 +311,20 @@ def get_feature_importance(
         frame = frame.head(top_n).reset_index(drop=True)
 
     return frame
+
+
+def _base_feature(encoded_name: str) -> str:
+    """Map a ``ColumnTransformer`` output name back to its base feature.
+
+    ``"categorical__neighborhood_Downtown (Miami)"`` -> ``"neighborhood"`` and
+    ``"numeric__sqft"`` -> ``"sqft"``. Aggregating one-hot columns back to their
+    source feature keeps the importance chart interpretable.
+    """
+    base = encoded_name.split("__", 1)[1] if "__" in encoded_name else encoded_name
+    for categorical in config.CATEGORICAL_FEATURES:
+        if base.startswith(categorical + "_"):
+            return categorical
+    return base
 
 
 # --------------------------------------------------------------------------- #
@@ -341,14 +354,26 @@ def features_to_frame(features: dict[str, Any]) -> pd.DataFrame:
     so the function is safe to call from the UI layer.
     """
     row: dict[str, Any] = {}
+    defaults = _default_categoricals()
     for column in config.FEATURE_COLUMNS:
         if column in features:
             row[column] = features[column]
-        elif column == "neighborhood":
-            row[column] = next(iter(config.NEIGHBORHOODS))
+        elif column in defaults:
+            row[column] = defaults[column]
         else:
             row[column] = np.nan
     return pd.DataFrame([row], columns=config.FEATURE_COLUMNS)
+
+
+@lru_cache(maxsize=1)
+def _default_categoricals() -> dict[str, str]:
+    """Provide sensible defaults for categorical inputs (first market/location).
+
+    Cached because it reads the committed market snapshot, which is static.
+    """
+    anchors = market_data.get_synthetic_anchors()
+    first = anchors.sort_values(["market_id", "size_rank"]).iloc[0]
+    return {"market": first["market"], "neighborhood": first["neighborhood"]}
 
 
 def predict_price(model: TransformedTargetRegressor, features: dict[str, Any]) -> float:

@@ -10,7 +10,8 @@ import config
 from data_loader import (
     clean_data,
     generate_synthetic_data,
-    get_neighborhood_stats,
+    get_location_stats,
+    get_market_stats,
     validate_schema,
 )
 
@@ -19,12 +20,12 @@ EXPECTED_DERIVED = ["price_per_sqft", "property_age"]
 
 def test_generate_returns_expected_columns(raw_df: pd.DataFrame) -> None:
     assert set(config.RAW_COLUMNS).issubset(raw_df.columns)
-    assert len(raw_df) >= 500
+    assert raw_df["market"].nunique() == config.TOP_N_MARKETS
 
 
 def test_generate_is_reproducible() -> None:
-    first = generate_synthetic_data(n_records=200, seed=123)
-    second = generate_synthetic_data(n_records=200, seed=123)
+    first = generate_synthetic_data(listings_per_neighborhood=2, seed=123)
+    second = generate_synthetic_data(listings_per_neighborhood=2, seed=123)
     pd.testing.assert_frame_equal(first, second)
 
 
@@ -65,11 +66,17 @@ def test_clean_has_expected_dtypes(clean_df: pd.DataFrame) -> None:
     assert pd.api.types.is_float_dtype(clean_df["price"])
 
 
-def test_neighborhood_stats_are_consistent(clean_df: pd.DataFrame) -> None:
-    stats = get_neighborhood_stats(clean_df)
+def test_location_stats_are_consistent(clean_df: pd.DataFrame) -> None:
+    stats = get_location_stats(clean_df)
     assert stats["listings"].sum() == len(clean_df)
-    assert set(stats.index) == set(clean_df["neighborhood"].unique())
     assert (stats["median_price"] > 0).all()
+    assert set(stats["market"]).issubset(set(clean_df["market"]))
+
+
+def test_market_stats_are_consistent(clean_df: pd.DataFrame) -> None:
+    stats = get_market_stats(clean_df)
+    assert stats["listings"].sum() == len(clean_df)
+    assert len(stats) == clean_df["market"].nunique()
     assert stats["median_price"].is_monotonic_decreasing
 
 
