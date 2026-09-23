@@ -131,3 +131,32 @@ def test_merge_health_handles_empty() -> None:
     merged = market_data.merge_health(summary, pd.DataFrame(columns=["market_id", "metric", "month", "value"]))
     for metric in market_data.HEALTH_METRICS:
         assert merged[metric].isna().all()
+
+
+def _national_summary() -> pd.DataFrame:
+    markets = market_data.load_markets()
+    summary = market_data.build_market_summary(markets, market_data.load_market_history())
+    summary = market_data.merge_rents(summary, market_data.load_market_rents())
+    return market_data.merge_health(summary, market_data.load_market_health())
+
+
+def test_build_national_summary() -> None:
+    national = market_data.build_national_summary(_national_summary())
+    assert national["markets"] == config.TOP_N_MARKETS
+    assert national["latest_value"] > 0
+    assert national["latest_rent"] > 0
+    assert national["days_to_pending"] > 0
+    assert national["inventory"] > 0
+
+
+def test_build_national_history() -> None:
+    national = market_data.build_national_history(market_data.load_market_history())
+    assert {"month", "value"}.issubset(national.columns)
+    assert (national["value"] > 0).all()
+    assert national["month"].is_monotonic_increasing
+
+
+def test_build_national_health() -> None:
+    national = market_data.build_national_health(market_data.load_market_health())
+    assert set(national["metric"]) == set(market_data.HEALTH_METRICS)
+    assert (national["value"] > 0).all()

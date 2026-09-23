@@ -31,7 +31,8 @@ def test_app_runs_and_estimates(monkeypatch) -> None:
 
     labels = [s.label for s in at.selectbox]
     assert "Select a country" in labels
-    assert "Select a market" in labels
+    assert "Location" in labels
+    assert "Select a market" not in labels  # US metro selector removed
 
     submit = [b for b in at.button if b.label == "Estimate Value"]
     assert submit, "Estimate button not found"
@@ -44,13 +45,13 @@ def test_app_runs_and_estimates(monkeypatch) -> None:
 def test_app_seeds_from_query_params(monkeypatch) -> None:
     _offline(monkeypatch)
     at = AppTest.from_file(APP_PATH, default_timeout=300)
-    at.query_params["market"] = "Miami, FL"
     at.query_params["sqft"] = "3000"
     at.run()
 
     assert not at.exception, [e.value for e in at.exception]
-    assert _selectbox(at, "Select a market").value == "Miami, FL"
     assert at.session_state["sqft_input"] == 3000
+    assert isinstance(at.session_state["location_select"], str)
+    assert at.session_state["location_select"]
 
 
 def test_app_switches_country(monkeypatch) -> None:
@@ -63,7 +64,7 @@ def test_app_switches_country(monkeypatch) -> None:
     assert not at.exception, [e.value for e in at.exception]
     assert len(at.tabs) == 3
 
-    # United Kingdom -> China (no valuation tool, 2 tabs).
+    # United Kingdom -> China (no valuation tool).
     _selectbox(at, "Select a country").select("CN").run()
     assert not at.exception, [e.value for e in at.exception]
     assert len(at.tabs) == 2

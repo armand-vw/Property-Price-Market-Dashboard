@@ -30,6 +30,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import config  # noqa: E402
+import insights  # noqa: E402
 import international_data  # noqa: E402
 import market_data  # noqa: E402
 from data_loader import load_or_create_data  # noqa: E402
@@ -183,6 +184,15 @@ def _num(value) -> float | None:
     return number if math.isfinite(number) else None
 
 
+def _series(rows: pd.DataFrame, date_col: str, value_col: str) -> list[list]:
+    """Convert two columns into ``[[date, value], ...]`` for the browser."""
+    return [
+        [date.strftime("%Y-%m-%d"), _num(value)]
+        for date, value in zip(rows[date_col], rows[value_col], strict=False)
+        if _num(value) is not None
+    ]
+
+
 def _build_sidebar_payload(
     summary: pd.DataFrame,
     history: pd.DataFrame,
@@ -190,7 +200,7 @@ def _build_sidebar_payload(
     country_summary: pd.DataFrame,
     health: pd.DataFrame,
 ) -> dict[str, str]:
-    """Serialise the data and options for the interactive page sidebar."""
+    """Serialise the data, education copy and options for the page sidebar."""
     countries: list[dict] = []
     for code in config.COUNTRY_ORDER:
         group = bis[bis["country_code"] == code].sort_values("period_date")
@@ -199,91 +209,76 @@ def _build_sidebar_payload(
             continue
         group = group.tail(60)
         latest = row.iloc[0]
+        name = config.COUNTRIES[code]["name"]
+        temperature = insights.market_temperature(latest["yoy_pct"], None, None)
+        narrative = insights.build_market_narrative(
+            name, yoy=latest["yoy_pct"], change_5y=latest["change_5y_pct"], temperature=temperature
+        )
         countries.append(
             {
                 "code": code,
-                "name": config.COUNTRIES[code]["name"],
+                "name": name,
                 "period": str(latest["period"]),
                 "index": _num(latest["index"]),
                 "yoy": _num(latest["yoy_pct"]),
                 "change": _num(latest["change_5y_pct"]),
                 "source": config.COUNTRIES[code]["source"],
-                "history": [
-                    [date.strftime("%Y-%m-%d"), _num(value)]
-                    for date, value in zip(group["period_date"], group["index"], strict=False)
-                ],
-                "yoy_history": [
-                    [date.strftime("%Y-%m-%d"), _num(value)]
-                    for date, value in zip(group["period_date"], group["yoy_pct"], strict=False)
-                    if _num(value) is not None
-                ],
+                "temperature": temperature,
+                "narrative": narrative,
+                "index_history": _series(group, "period_date", "index"),
+                "yoy_history": _series(group, "period_date", "yoy_pct"),
             }
         )
 
-    markets: list[dict] = []
-    for row in summary.sort_values("size_rank").itertuples():
-        group = history[history["market_id"] == row.market_id].sort_values("month").tail(132)
-        group = group.reset_index(drop=True)
-        yoy_series = group["value"] / group["value"].shift(12) * 100.0 - 100.0
-        market_health = health[health["market_id"] == row.market_id]
-
-        def _metric(name: str, _market_health: pd.DataFrame = market_health) -> float | None:
-            series = _market_health[_market_health["metric"] == name].sort_values("month")
-            return _num(series["value"].iloc[-1]) if not series.empty else None
-
-        inventory = market_health[market_health["metric"] == "inventory"].sort_values("month")
-        pending = market_health[market_health["metric"] == "days_to_pending"].sort_values("month")
-
-        markets.append(
-            {
-                "id": int(row.market_id),
-                "name": row.market,
-                "latest": _num(row.latest_value),
-                "month": pd.to_datetime(row.latest_month).strftime("%b %Y"),
-                "yoy": _num(row.yoy_pct),
-                "change": _num(getattr(row, "change_5y_pct", None)),
-                "rent": _num(getattr(row, "latest_rent", None)),
-                "yield": _num(getattr(row, "gross_yield_pct", None)),
-                "days_to_pending": _metric("days_to_pending"),
-                "inventory": _metric("inventory"),
-                "median_sale_price": _metric("median_sale_price"),
-                "source": "Zillow Research · monthly",
-                "history": [
-                    [date.strftime("%Y-%m-%d"), _num(value)]
-                    for date, value in zip(group["month"], group["value"], strict=False)
-                ],
-                "yoy_history": [
-                    [date.strftime("%Y-%m-%d"), _num(value)]
-                    for date, value in zip(group["month"], yoy_series, strict=False)
-                    if _num(value) is not None
-                ],
-                "health_history": {
-                    "inventory": [
-                        [date.strftime("%Y-%m-%d"), _num(value)]
-                        for date, value in zip(inventory["month"], inventory["value"], strict=False)
-                        if _num(value) is not None
-                    ],
-                    "days_to_pending": [
-                        [date.strftime("%Y-%m-%d"), _num(value)]
-                        for date, value in zip(pending["month"], pending["value"], strict=False)
-                        if _num(value) is not None
-                    ],
-                },
-            }
-        )
+    national = market_data.build_national_summary(summary)
+    national_history = market_data.build_national_history(history)
+    national_history["yoy"] = national_history["value"] / national_history["value"].shift(12) * 100.0 - 100.0
+    national_health = market_data.build_national_health(health)
+    us_row = country_summary[country_summary["country_code"] == "US"]
+    us_group = bis[bis["country_code"] == "US"].sort_values("period_date").tail(60)
+    temperature = insights.market_temperature(
+        national["yoy_pct"], national["days_to_pending"], None
+    )
+    narrative = insights.build_market_narrative(
+        "the United States", yoy=national["yoy_pct"], change_5y=national["change_5y_pct"],
+        days_to_pending=national["days_to_pending"], temperature=temperature,
+    )
+    us_national = {
+        "name": "United States",
+        "period": str(us_row.iloc[0]["period"]) if not us_row.empty else "",
+        "index": _num(us_row.iloc[0]["index"]) if not us_row.empty else None,
+        "index_history": _series(us_group, "period_date", "index"),
+        "median_value": _num(national["latest_value"]),
+        "rent": _num(national["latest_rent"]),
+        "yield": _num(national["gross_yield_pct"]),
+        "median_sale_price": _num(national["median_sale_price"]),
+        "yoy": _num(national["yoy_pct"]),
+        "change_5y": _num(national["change_5y_pct"]),
+        "days_to_pending": _num(national["days_to_pending"]),
+        "inventory": _num(national["inventory"]),
+        "temperature": temperature,
+        "narrative": narrative,
+        "value_history": _series(national_history, "month", "value"),
+        "value_yoy_history": _series(national_history, "month", "yoy"),
+        "health_history": {
+            "inventory": _series(national_health[national_health["metric"] == "inventory"], "month", "value"),
+            "days_to_pending": _series(national_health[national_health["metric"] == "days_to_pending"], "month", "value"),
+        },
+    }
 
     country_options = "".join(
         f'<option value="{item["code"]}">{html.escape(item["name"])}</option>'
         for item in countries
     )
-    market_options = "".join(
-        f'<option value="{item["id"]}">{html.escape(item["name"])}</option>'
-        for item in markets
+    glossary = "".join(
+        f'<div class="glossary-item"><strong>{html.escape(term.replace("_", " ").title())}</strong>'
+        f'<span>{html.escape(definition)}</span></div>'
+        for term, definition in insights.glossary().items()
     )
     return {
-        "json": json.dumps({"countries": countries, "markets": markets}),
+        "json": json.dumps({"countries": countries, "us": us_national}),
         "country_options": country_options,
-        "market_options": market_options,
+        "glossary": glossary,
     }
 
 
@@ -364,25 +359,26 @@ TEMPLATE = r"""<!DOCTYPE html>
 </section>
 
 <section id="dashboard" class="app-shell">
-  <aside class="app-sidebar">
-    <div class="sidebar-brand">🏙️ Property Insights</div>
-    <div class="sidebar-hint">Choose a market to update the dashboard.</div>
-    <label for="countrySelect">Country</label>
-    <select id="countrySelect" aria-label="Country">__COUNTRY_OPTIONS__</select>
-    <div id="marketWrap">
-      <label for="marketSelect">US Market</label>
-      <select id="marketSelect" aria-label="US market">__MARKET_OPTIONS__</select>
-    </div>
-    <p class="explorer-note">US: Zillow Research (ZHVI/ZORI). Other countries: BIS national house-price index. Run the full app for live valuation.</p>
-    <div class="sidebar-links">
-      <a class="btn-sidebar" href="#stack">▶ Run the full app</a>
-      <a class="btn-sidebar" href="__REPO_URL__" target="_blank" rel="noopener">GitHub ↗</a>
-    </div>
-  </aside>
+    <aside class="app-sidebar">
+      <div class="sidebar-brand">🏙️ Property Insights</div>
+      <div class="sidebar-hint">Choose a country to update the dashboard.</div>
+      <label for="countrySelect">Country</label>
+      <select id="countrySelect" aria-label="Country">__COUNTRY_OPTIONS__</select>
+      <p class="explorer-note">United States: national Zillow data plus a location-based valuation app. Other countries: BIS national house-price index. Run the full app for live valuation.</p>
+      <div class="sidebar-links">
+        <a class="btn-sidebar" href="#stack">▶ Run the full app</a>
+        <a class="btn-sidebar" href="__REPO_URL__" target="_blank" rel="noopener">GitHub ↗</a>
+      </div>
+    </aside>
   <main class="app-main">
     <div class="app-head">
       <h2 id="dashTitle">United States</h2>
       <span id="dashSub" class="muted"></span>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">What this means</div>
+      <p id="summaryText">Loading…</p>
+      <span id="tempBadge" class="temp-badge temp-warm">—</span>
     </div>
     <div class="kpis-row">
       <div class="mini-kpi"><span id="k1l">Metric</span><strong id="k1v">—</strong><span id="k1s"></span></div>
@@ -400,6 +396,10 @@ TEMPLATE = r"""<!DOCTYPE html>
     </div>
     <div class="chart-card"><div id="explorerChart"></div></div>
     <div class="chart-card"><h3>Year-over-Year Change</h3><p class="muted">Annual change for the selected market / country.</p><div id="explorerYoy"></div></div>
+    <div class="chart-card">
+      <h3>📚 Market 101 — what these numbers mean</h3>
+      <div class="glossary-grid">__GLOSSARY__</div>
+    </div>
   </main>
 </section>
 
@@ -494,11 +494,11 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
   if (typeof Plotly === "undefined") { return; }
   var DATA = __SIDEBAR_DATA__;
   var countrySel = document.getElementById("countrySelect");
-  var marketSel = document.getElementById("marketSelect");
-  var marketWrap = document.getElementById("marketWrap");
   var healthWrap = document.getElementById("healthWrap");
   var titleEl = document.getElementById("dashTitle");
   var subEl = document.getElementById("dashSub");
+  var summaryEl = document.getElementById("summaryText");
+  var tempEl = document.getElementById("tempBadge");
   var trendEl = document.getElementById("explorerChart");
   var yoyEl = document.getElementById("explorerYoy");
   var healthEl = document.getElementById("explorerHealth");
@@ -517,6 +517,11 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     return "$" + Math.round(v);
   }
   function pct(v) { return isNum(v) ? (v >= 0 ? "+" : "") + v.toFixed(1) + "%" : "n/a"; }
+  function setTemp(t) {
+    if (!tempEl || !t || !t.label) { return; }
+    tempEl.textContent = t.label + " market";
+    tempEl.className = "temp-badge " + (t.label === "Hot" ? "temp-hot" : (t.label === "Cool" ? "temp-cool" : "temp-warm"));
+  }
   function layout(title, isMoney) {
     return {
       title: { text: title, font: { size: 16 } },
@@ -527,9 +532,9 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
       paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
     };
   }
-  function drawTrend(history, title, isMoney) {
-    var x = history.map(function (p) { return p[0]; });
-    var y = history.map(function (p) { return p[1]; });
+  function drawTrend(series, title, isMoney) {
+    var x = series.map(function (p) { return p[0]; });
+    var y = series.map(function (p) { return p[1]; });
     Plotly.react(trendEl, [{
       x: x, y: y, mode: "lines",
       line: { color: "#4F46E5", width: 3 },
@@ -537,9 +542,9 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
       hovertemplate: (isMoney ? "%{x|%b %Y}<br>$%{y:,.0f}" : "%{x|%Y}<br>%{y:.1f}") + "<extra></extra>"
     }], layout(title, isMoney), { displayModeBar: false, responsive: true });
   }
-  function drawYoy(history, title) {
-    var x = history.map(function (p) { return p[0]; });
-    var y = history.map(function (p) { return p[1]; });
+  function drawYoy(series, title) {
+    var x = series.map(function (p) { return p[0]; });
+    var y = series.map(function (p) { return p[1]; });
     Plotly.react(yoyEl, [{
       x: x, y: y, type: "bar",
       marker: { color: y.map(function (v) { return v >= 0 ? "#059669" : "#DC2626"; }) },
@@ -573,42 +578,39 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
       paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
     }, { displayModeBar: false, responsive: true });
   }
-  function renderMarket() {
-    var m = DATA.markets.filter(function (x) { return String(x.id) === marketSel.value; })[0];
-    if (!m) { return; }
+  function renderUs() {
+    var us = DATA.us;
     if (healthWrap) { healthWrap.style.display = "block"; }
-    titleEl.textContent = m.name;
-    subEl.textContent = "Zillow Research · monthly · latest " + m.month;
-    setKpi(1, "Median Home Value", money(m.latest), "Latest " + m.month);
-    setKpi(2, "Year over Year", pct(m.yoy), "Zillow ZHVI");
-    setKpi(3, "5-Year Change", pct(m.change), "Nominal");
-    setKpi(4, "Gross Rental Yield", isNum(m.yield) ? m.yield.toFixed(1) + "%" : "n/a",
-           isNum(m.rent) ? "Rent " + money(m.rent) + "/mo" : "ZORI");
-    setText("h1v", isNum(m.days_to_pending) ? Math.round(m.days_to_pending).toString() : "n/a");
-    setText("h2v", isNum(m.inventory) ? Math.round(m.inventory).toLocaleString() : "n/a");
-    setText("h3v", money(m.median_sale_price));
-    drawTrend(m.history, m.name + " — median home value", true);
-    drawYoy(m.yoy_history, m.name + " — year-over-year change");
-    drawHealth(m.health_history, m.name);
+    titleEl.textContent = "United States";
+    subEl.textContent = "National view · median of 15 metros · Zillow Research";
+    setText("summaryText", us.narrative);
+    setTemp(us.temperature);
+    setKpi(1, "Median Home Value", money(us.median_value), "National median");
+    setKpi(2, "Year over Year", pct(us.yoy), "Across 15 metros");
+    setKpi(3, "Gross Rental Yield", isNum(us.yield) ? us.yield.toFixed(1) + "%" : "n/a", "Annual rent ÷ value");
+    setKpi(4, "Median Rent", isNum(us.rent) ? money(us.rent) + "/mo" : "n/a", "ZORI");
+    setText("h1v", isNum(us.days_to_pending) ? Math.round(us.days_to_pending).toString() : "n/a");
+    setText("h2v", isNum(us.inventory) ? Math.round(us.inventory).toLocaleString() : "n/a");
+    setText("h3v", money(us.median_sale_price));
+    drawTrend(us.value_history, "United States — median home value", true);
+    drawYoy(us.value_yoy_history, "United States — year-over-year change");
+    drawHealth(us.health_history, "United States");
   }
   function renderCountry() {
     var code = countrySel.value;
-    if (code === "US") {
-      marketWrap.style.display = "block";
-      renderMarket();
-      return;
-    }
-    marketWrap.style.display = "none";
+    if (code === "US") { renderUs(); return; }
     if (healthWrap) { healthWrap.style.display = "none"; }
     var c = DATA.countries.filter(function (x) { return x.code === code; })[0];
     if (!c) { return; }
     titleEl.textContent = c.name;
     subEl.textContent = "BIS nominal index (2010 = 100) · quarterly · latest " + c.period;
+    setText("summaryText", c.narrative);
+    setTemp(c.temperature);
     setKpi(1, "House Price Index", isNum(c.index) ? c.index.toFixed(1) : "n/a", "Latest " + c.period);
     setKpi(2, "Year over Year", pct(c.yoy), "BIS nominal");
     setKpi(3, "5-Year Change", pct(c.change), "Nominal index");
-    setKpi(4, "Source", "BIS", "National, quarterly");
-    drawTrend(c.history, c.name + " — house price index (2010 = 100)", false);
+    setKpi(4, "Market Temperature", c.temperature ? c.temperature.label : "n/a", "From YoY change");
+    drawTrend(c.index_history, c.name + " — house price index (2010 = 100)", false);
     drawYoy(c.yoy_history, c.name + " — year-over-year change");
   }
   function readHash() {
@@ -621,9 +623,7 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     return out;
   }
   function writeHash() {
-    var parts = ["country=" + encodeURIComponent(countrySel.value)];
-    if (countrySel.value === "US") { parts.push("market=" + encodeURIComponent(marketSel.value)); }
-    var hash = "#" + parts.join("&");
+    var hash = "#country=" + encodeURIComponent(countrySel.value);
     try { history.replaceState(null, "", hash); } catch (err) { location.hash = hash; }
   }
   function applyHash() {
@@ -631,14 +631,10 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     if (params.country && DATA.countries.some(function (c) { return c.code === params.country; })) {
       countrySel.value = params.country;
     }
-    if (params.market && DATA.markets.some(function (m) { return String(m.id) === params.market; })) {
-      marketSel.value = params.market;
-    }
   }
 
   applyHash();
   countrySel.addEventListener("change", function () { renderCountry(); writeHash(); });
-  marketSel.addEventListener("change", function () { renderMarket(); writeHash(); });
   renderCountry();
   writeHash();
 })();
@@ -684,7 +680,7 @@ def render_page(
         "__TOP_DRIVERS__": html.escape(top_drivers),
         "__SIDEBAR_DATA__": sidebar["json"],
         "__COUNTRY_OPTIONS__": sidebar["country_options"],
-        "__MARKET_OPTIONS__": sidebar["market_options"],
+        "__GLOSSARY__": sidebar["glossary"],
         "__CHART_VALUES__": build_market_values(summary),
         "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_YIELD__": build_rental_yield(summary),

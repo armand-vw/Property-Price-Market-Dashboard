@@ -289,6 +289,46 @@ def merge_health(summary: pd.DataFrame, health: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
+def build_national_summary(summary: pd.DataFrame) -> dict:
+    """Aggregate the metro summary into a single national (median) view."""
+    def _median(column: str) -> float | None:
+        if column not in summary.columns or summary[column].dropna().empty:
+            return None
+        return float(summary[column].median())
+
+    return {
+        "markets": int(len(summary)),
+        "latest_value": _median("latest_value"),
+        "yoy_pct": _median("yoy_pct"),
+        "change_5y_pct": _median("change_5y_pct"),
+        "latest_rent": _median("latest_rent"),
+        "gross_yield_pct": _median("gross_yield_pct"),
+        "inventory": _median("inventory"),
+        "days_to_pending": _median("days_to_pending"),
+        "median_sale_price": _median("median_sale_price"),
+    }
+
+
+def build_national_history(history: pd.DataFrame) -> pd.DataFrame:
+    """Median home value across metros per month (pure function)."""
+    return (
+        history.groupby("month", as_index=False)["value"]
+        .median()
+        .sort_values("month")
+        .reset_index(drop=True)
+    )
+
+
+def build_national_health(health: pd.DataFrame) -> pd.DataFrame:
+    """Median market-health value across metros per month (pure function)."""
+    return (
+        health.groupby(["month", "metric"], as_index=False)["value"]
+        .median()
+        .sort_values(["metric", "month"])
+        .reset_index(drop=True)
+    )
+
+
 def get_market_data(force_refresh: bool = False) -> dict:
     """Return the current market overview, rents and history.
 

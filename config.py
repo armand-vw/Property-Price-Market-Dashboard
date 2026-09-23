@@ -247,3 +247,29 @@ AGE_LABELS: list[str] = [
     "Established (31-60 yrs)",
     "Historic (60+ yrs)",
 ]
+
+# --------------------------------------------------------------------------- #
+# Plain-English education layer
+# --------------------------------------------------------------------------- #
+#: One-line definitions shown as tooltips / a glossary for everyday users.
+GLOSSARY: dict[str, str] = {
+    "zhvi": "Zillow Home Value Index — the typical (median) home value in an area, updated monthly.",
+    "zori": "Zillow Observed Rent Index — the typical monthly rent in an area.",
+    "price": "The estimated fair market value of a property, in local currency.",
+    "yoy": "Year over year — how much a value changed versus the same time last year.",
+    "mom": "Month over month — how much a value changed versus the previous month.",
+    "change_5y": "The total change over the last five years.",
+    "index": "A house-price index. 2010 = 100, so 120 means values are 20% higher than in 2010.",
+    "yield": "Gross rental yield — annual rent divided by the property price, before costs.",
+    "rent": "The median monthly rent for the area.",
+    "inventory": "For-sale inventory — how many homes are currently listed for sale.",
+    "days_to_pending": "Days to pending — the typical time from listing to going under contract; lower means a faster, hotter market.",
+    "median_sale_price": "The median price of homes that actually sold (closed sales).",
+    "temperature": "Market temperature — a simple Hot / Warm / Cool read on current conditions.",
+    "r2": "R² — the share of price variation the model explains (1.0 is perfect).",
+    "mape": "MAPE — the model's average percentage error. Lower is more accurate.",
+}
+
+#: Thresholds for the Hot / Warm / Cool market temperature rating.
+TEMPERATURE_HOT: float = 0.25
+TEMPERATURE_COOL: float = -0.25

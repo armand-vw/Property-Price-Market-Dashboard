@@ -1,4 +1,4 @@
-"""Tests for the static GitHub Pages site builders (Explorer sidebar)."""
+"""Tests for the static GitHub Pages site builders (national sidebar)."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def _load_build_site():
     return module
 
 
-def test_sidebar_payload_has_countries_and_markets() -> None:
+def test_sidebar_payload_has_countries_and_us_national() -> None:
     build_site = _load_build_site()
 
     summary = market_data.build_market_summary(
@@ -35,22 +35,18 @@ def test_sidebar_payload_has_countries_and_markets() -> None:
     data = json.loads(payload["json"])
 
     assert len(data["countries"]) == len(config.COUNTRY_ORDER)
-    assert len(data["markets"]) == config.TOP_N_MARKETS
+    assert "markets" not in data  # the US metro selector was removed
     assert data["countries"][0]["code"] == "US"
-    assert all(item["history"] for item in data["countries"])
-    assert all(item["history"] for item in data["markets"])
+    assert all(item["index_history"] for item in data["countries"])
+    assert all(item["yoy_history"] for item in data["countries"])
+    assert all(item["narrative"] and item["temperature"] for item in data["countries"])
 
-    # Fields the sidebar panel relies on.
-    assert "yoy_history" in data["countries"][0]
-    assert {"change", "yoy_history", "yield", "rent"}.issubset(data["markets"][0].keys())
-    assert "yoy_history" in data["markets"][0]
+    us = data["us"]
+    assert {
+        "median_value", "yoy", "value_history", "value_yoy_history",
+        "health_history", "narrative", "temperature",
+    }.issubset(us.keys())
+    assert us["temperature"]["label"] in {"Hot", "Warm", "Cool"}
 
-    # US market-health fields.
-    assert {"days_to_pending", "inventory", "median_sale_price", "health_history"}.issubset(
-        data["markets"][0].keys()
-    )
-
-    # Selector options rendered server-side.
-    assert 'value="US"' in payload["country_options"]
     assert payload["country_options"].count("<option") == len(config.COUNTRY_ORDER)
-    assert payload["market_options"].count("<option") == config.TOP_N_MARKETS
+    assert "glossary-item" in payload["glossary"]

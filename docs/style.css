@@ -319,6 +319,42 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
 .app-main .chart-card { margin-top: 0; margin-bottom: 16px; }
 #healthWrap .kpis-row { grid-template-columns: repeat(3, 1fr); }
 
+/* --- Education layer ----------------------------------------------------- */
+.summary-card {
+  background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
+  border: 1px solid #c7d2fe;
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.summary-label {
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #3730a3;
+  font-weight: 700;
+}
+.summary-card p { margin: 8px 0 0; color: #1e1b4b; font-size: 0.94rem; line-height: 1.55; }
+.temp-badge {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+.temp-hot { background: #fee2e2; color: #991b1b; }
+.temp-warm { background: #fef3c7; color: #92400e; }
+.temp-cool { background: #dbeafe; color: #1e40af; }
+.glossary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 24px;
+  margin-top: 8px;
+}
+.glossary-item { font-size: 0.85rem; color: var(--muted); }
+.glossary-item strong { display: block; color: var(--ink); }
+
 /* --- Responsive ---------------------------------------------------------- */
 @media (max-width: 1024px) {
   .kpis-row { grid-template-columns: repeat(2, 1fr); }
@@ -331,6 +367,7 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
   .app-shell { flex-direction: column; }
   .app-sidebar { position: static; width: 100%; flex: 1 1 auto; }
   .kpis-row { grid-template-columns: 1fr; }
+  .glossary-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .kpis { grid-template-columns: 1fr; }

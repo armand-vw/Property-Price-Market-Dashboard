@@ -63,17 +63,23 @@ market snapshot and fitted model are committed, so it even runs fully offline
   Non-US countries show real national BIS house-price indices and a curated
   cross-country comparison; the UK adds regional average prices from HM Land
   Registry.
-- **US market health** — median days to pending, for-sale inventory and median
-  sale price per metro (Zillow), surfaced in the app and the Pages sidebar.
+- **US national view** — median values, rents, gross yield and market health
+  (days to pending, inventory, median sale price) aggregated across the 15
+  largest metros, with all-metro comparison charts.
+- **Plain-English education layer** — ⓘ tooltips and a Market 101 glossary,
+  an auto-generated “what this means” summary, and a **Hot / Warm / Cool**
+  market temperature for every selection.
+- **Location-based valuation** — estimate any US property via a single location
+  dropdown (no metro picker needed); the model derives the metro internally.
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
   Dallas, Houston, Washington DC, Philadelphia, Miami, Atlanta, Boston, Phoenix,
   San Francisco, Riverside, Detroit, Seattle) — real monthly median home values
   **and rents**, with MoM / YoY / 5-year changes, 10-year trends and gross
   rental yield.
-- **Real neighbourhood values** — each market carries its actual neighbourhoods
+- **Real neighbourhood values** — each metro carries its actual neighbourhoods
   and their median values from a compact committed snapshot (the raw file is
   ~100 MB; it is reduced at build time).
-- **Shareable URLs** — the selected market, location and estimate inputs are
+- **Shareable URLs** — the selected country, location and estimate inputs are
   reflected in the URL query string, so any view can be bookmarked or linked.
 - **Resilient data layer** — live Zillow fetch with a 24-hour cache, disk
   caching, a manual **Refresh** button, an automatic monthly GitHub Actions
@@ -86,7 +92,7 @@ market snapshot and fitted model are committed, so it even runs fully offline
   quantified evaluation (MAE, RMSE, MAPE, median APE, R², baseline).
 - **Empirical valuation ranges** from held-out residual quantiles rather than an
   over-confident symmetric `± MAPE` band.
-- **Polished multi-tab dashboard** — Markets, Market Analytics, Model Insights
+- **Polished multi-tab dashboard** — National, Market Analytics, Model Insights
   and Data Explorer, plus a live valuation tool with neighbourhood comparison.
 
 ---
@@ -208,8 +214,11 @@ home value) by geography. The app:
 For each market the app derives the latest median value, month-over-month,
 year-over-year and 5-year changes, a 10-year trend, and — from the ZORI rent
 series — the median rent and **gross rental yield** (annual rent ÷ home value).
-A **Refresh** button re-fetches live data on demand, and a scheduled GitHub
-Actions workflow rebuilds the committed snapshot monthly.
+For the country switcher the US is shown as a **national** market by taking the
+median across the 15 metros (value, rent, yield and market health); the
+per-metro detail remains in the all-metro comparison charts. A **Refresh** button
+re-fetches live data on demand, and a scheduled GitHub Actions workflow rebuilds
+the committed snapshot monthly.
 
 ### 2. International data (`international_data.py`)
 
@@ -291,33 +300,33 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 
 ## 🖥️ Dashboard Tour
 
-- **🗺️ Country switcher** — choose the **United States, United Kingdom, Canada,
-  Australia, China or South Africa**; the whole dashboard adapts.
-- **Executive KPI row** — listings, the selected market's **real** median value
-  and YoY, model accuracy (100 − MAPE) and R².
-- **🌎 Markets** (US) — live median value, MoM/YoY/5-year changes, rent and gross
-  rental yield, **market health** (days to pending, inventory, median sale
-  price), a 10-year value trend, latest-value / YoY / yield comparison across
-  all 15 markets, and a real neighbourhood value table.
+- **🗺️ Country switcher** — choose from **26 markets**; the whole dashboard
+  adapts (United States is the default).
+- **🧠 Plain-English education layer** — ⓘ tooltips on every metric, a
+  **“what this means”** summary, a **Hot / Warm / Cool** market temperature
+  badge, and a **Market 101** glossary.
+- **Executive KPI row** — national median value, YoY change, model accuracy
+  (100 − MAPE) and R².
+- **🇺🇸 National** (US) — national cards (median value, rent, gross yield,
+  days to pending, inventory, median sale price), a national value trend, and
+  all-metro comparison charts.
 - **🌍 International** (non-US) — national BIS house-price index, YoY and 5-year
   change, index/YoY trends, a curated **cross-country** comparison, and (for the
   UK) a nation-level price table from HM Land Registry.
-- **🖥️ Static Pages sidebar** — the GitHub Pages demo has a pinned sidebar that
-  switches country (26) and US market (15) entirely client-side, updating KPI
-  cards, market health, and trend/YoY charts; the selection is reflected in the
-  URL hash for sharing.
-- **📊 Market Analytics** — price-per-sqft scatter by location (colour-coded by
-  age band), median listing price by location, and feature importances.
+- **🖥️ Static Pages sidebar** — the GitHub Pages demo has a pinned, country-only
+  sidebar that updates KPI cards, the summary, temperature, market health and
+  charts entirely client-side; the selection is reflected in the URL hash.
+- **📊 Market Analytics** — price-per-sqft scatter by metro (colour-coded by age
+  band), median listing price by metro, and feature importances.
 - **🤖 Model Insights** — metric cards, predicted-vs-actual parity and residual
   diagnostics.
-- **🗂️ Data Explorer** — neighbourhood market summary, filterable listings and
-  CSV export.
-- **🎯 Live Valuation Tool (sidebar)** — pick a market and location, set the
-  property details (including lot size) and press **Estimate Value** to get the
-  estimate, an empirical valuation range, and a comparison against the **real**
-  neighbourhood median (US only).
-- **🔗 Shareable URLs** — the selected country, market, location and inputs are
-  encoded in the URL; copy the link from the sidebar to share or bookmark a view.
+- **🗂️ Data Explorer** — metro market summary, filterable listings and CSV export.
+- **🎯 Live Valuation Tool (sidebar)** — pick any US **Location** (all ~180
+  neighbourhoods, metro shown in the label), set the property details and press
+  **Estimate Value** to get the estimate, an empirical valuation range, and a
+  comparison against the **real** neighbourhood median.
+- **🔗 Shareable URLs** — the selected country, location and inputs are encoded
+  in the URL; copy the link from the sidebar to share or bookmark a view.
 - **📡 Data status** — the sidebar shows whether market data is `live` or from
   the snapshot, when it was fetched, and a **Refresh** button.
 
@@ -359,6 +368,8 @@ feature-importance aggregation and inference ranges.
 - [x] Add rents (ZORI) and gross rental yield per market.
 - [x] 26-market country switcher (US + 25 countries).
 - [x] US market health (inventory, days-to-pending, median sale price).
+- [x] National US view + location-based valuation (no metro picker).
+- [x] Plain-English education layer (tooltips, summary, Hot/Warm/Cool, glossary).
 - [ ] Add days-on-market / sale-to-list and price-cut share.
 - [ ] Swap synthetic listings for a real listing-level dataset behind the same
       loader interface.
