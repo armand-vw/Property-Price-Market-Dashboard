@@ -228,29 +228,29 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
 }
 .footer p { margin: 4px 0; }
 
-/* --- Market explorer sidebar --------------------------------------------- */
-.explorer {
+/* --- App shell: pinned sidebar + main panel ------------------------------ */
+.app-shell {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 40px 24px 0;
   display: flex;
-  margin-top: 24px;
+  gap: 24px;
+  align-items: flex-start;
+}
+.app-sidebar {
+  position: sticky;
+  top: 76px;
+  flex: 0 0 280px;
+  width: 280px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.explorer-sidebar {
-  flex: 0 0 280px;
-  width: 280px;
-  background: var(--background);
-  border-right: 1px solid var(--border);
   padding: 22px;
 }
-.explorer-title {
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 8px;
-}
-.explorer-sidebar label {
+.sidebar-brand { font-weight: 700; font-size: 1.05rem; }
+.sidebar-hint { font-size: 0.8rem; color: var(--muted); margin: 6px 0 4px; }
+.app-sidebar label {
   display: block;
   margin: 16px 0 6px;
   font-size: 0.72rem;
@@ -259,7 +259,7 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
   text-transform: uppercase;
   color: var(--muted);
 }
-.explorer-sidebar select {
+.app-sidebar select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid var(--border);
@@ -268,33 +268,43 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
   color: var(--ink);
   font-size: 0.95rem;
 }
-.explorer-sidebar select:focus {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
+.app-sidebar select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+.sidebar-links { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+.btn-sidebar {
+  display: block;
+  text-align: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 0.88rem;
 }
-.explorer-note {
-  margin-top: 20px;
-  font-size: 0.76rem;
-  line-height: 1.5;
-  color: var(--muted);
+.btn-sidebar:hover { background: var(--background); text-decoration: none; }
+.app-main { flex: 1; min-width: 0; }
+.app-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
 }
-.explorer-main {
-  flex: 1;
-  min-width: 0;
-  padding: 22px;
-}
+.app-head h2 { margin: 0; font-size: 1.5rem; }
+.app-head .muted { font-size: 0.85rem; }
 .kpis-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
+  margin-bottom: 16px;
 }
 .mini-kpi {
   display: flex;
   flex-direction: column;
   padding: 12px 14px;
-  background: var(--background);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
+  box-shadow: var(--shadow);
 }
 .mini-kpi span:first-child {
   font-size: 0.68rem;
@@ -303,26 +313,22 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
   text-transform: uppercase;
   color: var(--muted);
 }
-.mini-kpi strong {
-  margin: 4px 0 2px;
-  font-size: 1.25rem;
-  color: var(--ink);
-}
+.mini-kpi strong { margin: 4px 0 2px; font-size: 1.35rem; color: var(--ink); }
 .mini-kpi span:last-child { font-size: 0.74rem; color: var(--muted); }
+.explorer-note { margin-top: 16px; font-size: 0.76rem; line-height: 1.5; color: var(--muted); }
+.app-main .chart-card { margin-top: 0; margin-bottom: 16px; }
 
 /* --- Responsive ---------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .kpis-row { grid-template-columns: repeat(2, 1fr); }
+}
 @media (max-width: 900px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .hero h1 { font-size: 2rem; }
   .nav nav a:not(.btn) { display: none; }
-  .explorer { flex-direction: column; }
-  .explorer-sidebar {
-    flex: 1 1 auto;
-    width: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
+  .app-shell { flex-direction: column; }
+  .app-sidebar { position: static; width: 100%; flex: 1 1 auto; }
   .kpis-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {

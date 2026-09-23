@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -172,6 +173,15 @@ def build_country_growth(comparison: pd.DataFrame) -> str:
     return fig_to_html(style_fig(fig, 500))
 
 
+def _num(value) -> float | None:
+    """Return a JSON-safe float (``None`` for NaN/inf)."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return None
+    return number if math.isfinite(number) else None
+
+
 def _build_sidebar_payload(
     summary: pd.DataFrame,
     history: pd.DataFrame,
@@ -181,39 +191,57 @@ def _build_sidebar_payload(
     """Serialise the data and options for the interactive page sidebar."""
     countries: list[dict] = []
     for code in config.COUNTRY_ORDER:
-        group = bis[bis["country_code"] == code].sort_values("period_date").tail(60)
+        group = bis[bis["country_code"] == code].sort_values("period_date")
         row = country_summary[country_summary["country_code"] == code]
         if group.empty or row.empty:
             continue
+        group = group.tail(60)
         latest = row.iloc[0]
         countries.append(
             {
                 "code": code,
                 "name": config.COUNTRIES[code]["name"],
                 "period": str(latest["period"]),
-                "index": float(latest["index"]),
-                "yoy": float(latest["yoy_pct"]),
-                "change": float(latest["change_5y_pct"]),
+                "index": _num(latest["index"]),
+                "yoy": _num(latest["yoy_pct"]),
+                "change": _num(latest["change_5y_pct"]),
+                "source": config.COUNTRIES[code]["source"],
                 "history": [
-                    [date.strftime("%Y-%m-%d"), float(value)]
+                    [date.strftime("%Y-%m-%d"), _num(value)]
                     for date, value in zip(group["period_date"], group["index"], strict=False)
+                ],
+                "yoy_history": [
+                    [date.strftime("%Y-%m-%d"), _num(value)]
+                    for date, value in zip(group["period_date"], group["yoy_pct"], strict=False)
+                    if _num(value) is not None
                 ],
             }
         )
 
     markets: list[dict] = []
     for row in summary.sort_values("size_rank").itertuples():
-        group = history[history["market_id"] == row.market_id].sort_values("month").tail(120)
+        group = history[history["market_id"] == row.market_id].sort_values("month").tail(132)
+        group = group.reset_index(drop=True)
+        yoy_series = group["value"] / group["value"].shift(12) * 100.0 - 100.0
         markets.append(
             {
                 "id": int(row.market_id),
                 "name": row.market,
-                "latest": float(row.latest_value),
+                "latest": _num(row.latest_value),
                 "month": pd.to_datetime(row.latest_month).strftime("%b %Y"),
-                "yoy": float(row.yoy_pct),
+                "yoy": _num(row.yoy_pct),
+                "change": _num(getattr(row, "change_5y_pct", None)),
+                "rent": _num(getattr(row, "latest_rent", None)),
+                "yield": _num(getattr(row, "gross_yield_pct", None)),
+                "source": "Zillow Research · monthly",
                 "history": [
-                    [date.strftime("%Y-%m-%d"), float(value)]
+                    [date.strftime("%Y-%m-%d"), _num(value)]
                     for date, value in zip(group["month"], group["value"], strict=False)
+                ],
+                "yoy_history": [
+                    [date.strftime("%Y-%m-%d"), _num(value)]
+                    for date, value in zip(group["month"], yoy_series, strict=False)
+                    if _num(value) is not None
                 ],
             }
         )
@@ -272,7 +300,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="nav-inner">
     <span class="brand">🏙️ Property&nbsp;Insights</span>
     <nav>
-      <a href="#explorer">Explorer</a>
+      <a href="#dashboard">Explorer</a>
       <a href="#preview">Preview</a>
       <a href="#model">Model</a>
       <a href="#stack">Stack</a>
@@ -306,6 +334,38 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="kpi"><span class="kpi-label">R² Score</span><span class="kpi-value">__R2__</span><span class="kpi-sub">Held-out variance explained</span></div>
 </section>
 
+<section id="dashboard" class="app-shell">
+  <aside class="app-sidebar">
+    <div class="sidebar-brand">🏙️ Property Insights</div>
+    <div class="sidebar-hint">Choose a market to update the dashboard.</div>
+    <label for="countrySelect">Country</label>
+    <select id="countrySelect" aria-label="Country">__COUNTRY_OPTIONS__</select>
+    <div id="marketWrap">
+      <label for="marketSelect">US Market</label>
+      <select id="marketSelect" aria-label="US market">__MARKET_OPTIONS__</select>
+    </div>
+    <p class="explorer-note">US: Zillow Research (ZHVI/ZORI). Other countries: BIS national house-price index. Run the full app for live valuation.</p>
+    <div class="sidebar-links">
+      <a class="btn-sidebar" href="#stack">▶ Run the full app</a>
+      <a class="btn-sidebar" href="__REPO_URL__" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </aside>
+  <main class="app-main">
+    <div class="app-head">
+      <h2 id="dashTitle">United States</h2>
+      <span id="dashSub" class="muted"></span>
+    </div>
+    <div class="kpis-row">
+      <div class="mini-kpi"><span id="k1l">Metric</span><strong id="k1v">—</strong><span id="k1s"></span></div>
+      <div class="mini-kpi"><span id="k2l">Metric</span><strong id="k2v">—</strong><span id="k2s"></span></div>
+      <div class="mini-kpi"><span id="k3l">Metric</span><strong id="k3v">—</strong><span id="k3s"></span></div>
+      <div class="mini-kpi"><span id="k4l">Metric</span><strong id="k4v">—</strong><span id="k4s"></span></div>
+    </div>
+    <div class="chart-card"><div id="explorerChart"></div></div>
+    <div class="chart-card"><h3>Year-over-Year Change</h3><p class="muted">Annual change for the selected market / country.</p><div id="explorerYoy"></div></div>
+  </main>
+</section>
+
 <section class="features">
   <h2>What it does</h2>
   <div class="grid grid-3">
@@ -315,31 +375,6 @@ TEMPLATE = r"""<!DOCTYPE html>
     <div class="card"><div class="icon">🧠</div><h3>Explainable model</h3><p>XGBoost with aggregated feature importances, predicted-vs-actual parity and residual diagnostics.</p></div>
     <div class="card"><div class="icon">🧱</div><h3>Leak-free pipeline</h3><p>Imputation, scaling and one-hot encoding fitted inside an sklearn pipeline — never on the test set.</p></div>
     <div class="card"><div class="icon">⚙️</div><h3>Production ready</h3><p>Joblib artifact, live-to-snapshot fallback, pytest suite and CI on every push.</p></div>
-  </div>
-</section>
-
-<section id="explorer" class="section">
-  <h2>Market Explorer</h2>
-  <p class="section-lede">Choose a country — and for the US, a market — to update the chart and key figures. Runs entirely in your browser.</p>
-  <div class="explorer">
-    <aside class="explorer-sidebar">
-      <div class="explorer-title">🎛️ Controls</div>
-      <label for="countrySelect">Country</label>
-      <select id="countrySelect" aria-label="Country">__COUNTRY_OPTIONS__</select>
-      <div id="marketWrap">
-        <label for="marketSelect">US Market</label>
-        <select id="marketSelect" aria-label="US market">__MARKET_OPTIONS__</select>
-      </div>
-      <p class="explorer-note">US: Zillow Research (ZHVI). Other countries: BIS national house-price index. Run the full app for live valuation.</p>
-    </aside>
-    <div class="explorer-main">
-      <div class="kpis-row">
-        <div class="mini-kpi"><span id="k1l">Metric</span><strong id="k1v">—</strong><span id="k1s"></span></div>
-        <div class="mini-kpi"><span id="k2l">Metric</span><strong id="k2v">—</strong><span id="k2s"></span></div>
-        <div class="mini-kpi"><span id="k3l">Metric</span><strong id="k3v">—</strong><span id="k3s"></span></div>
-      </div>
-      <div id="explorerChart" class="chart"></div>
-    </div>
   </div>
 </section>
 
@@ -414,7 +449,7 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
 
 <footer class="footer">
   <p>Built with Streamlit, Plotly, XGBoost &amp; scikit-learn · Market data: Zillow Research. Estimates are illustrative and not financial advice.</p>
-  <p><a href="__REPO_URL__" target="_blank" rel="noopener">Source on GitHub</a> · Generated __GENERATED_AT__</p>
+  <p><a href="__REPO_URL__" target="_blank" rel="noopener">Source on GitHub</a> · Generated __GENERATED_AT__ · build __BUILD_STAMP__</p>
 </footer>
 
 <script>
@@ -424,45 +459,65 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
   var countrySel = document.getElementById("countrySelect");
   var marketSel = document.getElementById("marketSelect");
   var marketWrap = document.getElementById("marketWrap");
-  var chartEl = document.getElementById("explorerChart");
+  var titleEl = document.getElementById("dashTitle");
+  var subEl = document.getElementById("dashSub");
+  var trendEl = document.getElementById("explorerChart");
+  var yoyEl = document.getElementById("explorerYoy");
 
   function setKpi(i, label, value, sub) {
     document.getElementById("k" + i + "l").textContent = label;
     document.getElementById("k" + i + "v").textContent = value;
     document.getElementById("k" + i + "s").textContent = sub || "";
   }
+  function isNum(v) { return v !== null && v !== undefined && !isNaN(v); }
   function money(v) {
+    if (!isNum(v)) { return "n/a"; }
     if (v >= 1e6) { return "$" + (v / 1e6).toFixed(2) + "M"; }
     if (v >= 1e3) { return "$" + Math.round(v / 1e3) + "K"; }
     return "$" + Math.round(v);
   }
-  function pct(v) { return (v >= 0 ? "+" : "") + v.toFixed(1) + "%"; }
-  function draw(history, title, isMoney) {
+  function pct(v) { return isNum(v) ? (v >= 0 ? "+" : "") + v.toFixed(1) + "%" : "n/a"; }
+  function layout(title, isMoney) {
+    return {
+      title: { text: title, font: { size: 16 } },
+      template: "plotly_white", height: 360,
+      margin: { l: 60, r: 20, t: 50, b: 40 },
+      yaxis: { tickprefix: isMoney ? "$" : "", tickformat: ",", gridcolor: "#E2E8F0" },
+      xaxis: { showgrid: false },
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
+    };
+  }
+  function drawTrend(history, title, isMoney) {
     var x = history.map(function (p) { return p[0]; });
     var y = history.map(function (p) { return p[1]; });
-    var hover = isMoney
-      ? "%{x|%b %Y}<br>$%{y:,.0f}<extra></extra>"
-      : "%{x|%Y}<br>%{y:.1f}<extra></extra>";
-    Plotly.react(chartEl, [{
+    Plotly.react(trendEl, [{
       x: x, y: y, mode: "lines",
       line: { color: "#4F46E5", width: 3 },
       fill: "tozeroy", fillcolor: "rgba(79,70,229,0.08)",
-      hovertemplate: hover
-    }], {
-      title: { text: title, font: { size: 16 } },
-      template: "plotly_white", height: 430,
-      margin: { l: 60, r: 20, t: 50, b: 40 },
-      yaxis: { tickprefix: isMoney ? "$" : "", tickformat: "," },
-      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
-    }, { displayModeBar: false, responsive: true });
+      hovertemplate: (isMoney ? "%{x|%b %Y}<br>$%{y:,.0f}" : "%{x|%Y}<br>%{y:.1f}") + "<extra></extra>"
+    }], layout(title, isMoney), { displayModeBar: false, responsive: true });
+  }
+  function drawYoy(history, title) {
+    var x = history.map(function (p) { return p[0]; });
+    var y = history.map(function (p) { return p[1]; });
+    Plotly.react(yoyEl, [{
+      x: x, y: y, type: "bar",
+      marker: { color: y.map(function (v) { return v >= 0 ? "#059669" : "#DC2626"; }) },
+      hovertemplate: "%{x|%b %Y}<br>%{y:.1f}%<extra></extra>"
+    }], layout(title, false), { displayModeBar: false, responsive: true });
   }
   function renderMarket() {
     var m = DATA.markets.filter(function (x) { return String(x.id) === marketSel.value; })[0];
     if (!m) { return; }
+    titleEl.textContent = m.name;
+    subEl.textContent = "Zillow Research · monthly · latest " + m.month;
     setKpi(1, "Median Home Value", money(m.latest), "Latest " + m.month);
     setKpi(2, "Year over Year", pct(m.yoy), "Zillow ZHVI");
-    setKpi(3, "Market", m.name, "US metro");
-    draw(m.history, m.name + " — median home value", true);
+    setKpi(3, "5-Year Change", pct(m.change), "Nominal");
+    setKpi(4, "Gross Rental Yield", isNum(m.yield) ? m.yield.toFixed(1) + "%" : "n/a",
+           isNum(m.rent) ? "Rent " + money(m.rent) + "/mo" : "ZORI");
+    drawTrend(m.history, m.name + " — median home value", true);
+    drawYoy(m.yoy_history, m.name + " — year-over-year change");
   }
   function renderCountry() {
     var code = countrySel.value;
@@ -474,10 +529,14 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     marketWrap.style.display = "none";
     var c = DATA.countries.filter(function (x) { return x.code === code; })[0];
     if (!c) { return; }
-    setKpi(1, "House Price Index", c.index.toFixed(1), "Latest " + c.period);
+    titleEl.textContent = c.name;
+    subEl.textContent = "BIS nominal index (2010 = 100) · quarterly · latest " + c.period;
+    setKpi(1, "House Price Index", isNum(c.index) ? c.index.toFixed(1) : "n/a", "Latest " + c.period);
     setKpi(2, "Year over Year", pct(c.yoy), "BIS nominal");
     setKpi(3, "5-Year Change", pct(c.change), "Nominal index");
-    draw(c.history, c.name + " — house price index (2010 = 100)", false);
+    setKpi(4, "Source", "BIS", "National, quarterly");
+    drawTrend(c.history, c.name + " — house price index (2010 = 100)", false);
+    drawYoy(c.yoy_history, c.name + " — year-over-year change");
   }
 
   countrySel.addEventListener("change", renderCountry);
@@ -529,6 +588,7 @@ def render_page(
         "__CHART_COUNTRIES__": build_country_growth(comparison),
         "__CHART_IMPORTANCE__": build_feature_importance(importance),
         "__GENERATED_AT__": datetime.now(UTC).strftime("%b %Y"),
+        "__BUILD_STAMP__": datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC"),
     }
 
     page = TEMPLATE

@@ -39,6 +39,11 @@ def test_sidebar_payload_has_countries_and_markets() -> None:
     assert all(item["history"] for item in data["countries"])
     assert all(item["history"] for item in data["markets"])
 
+    # Fields the sidebar panel relies on.
+    assert "yoy_history" in data["countries"][0]
+    assert {"change", "yoy_history", "yield", "rent"}.issubset(data["markets"][0].keys())
+    assert "yoy_history" in data["markets"][0]
+
     # Selector options rendered server-side.
     assert 'value="US"' in payload["country_options"]
     assert payload["country_options"].count("<option") == len(config.COUNTRY_ORDER)
