@@ -317,6 +317,7 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
 .mini-kpi span:last-child { font-size: 0.74rem; color: var(--muted); }
 .explorer-note { margin-top: 16px; font-size: 0.76rem; line-height: 1.5; color: var(--muted); }
 .app-main .chart-card { margin-top: 0; margin-bottom: 16px; }
+#healthWrap .kpis-row { grid-template-columns: repeat(3, 1fr); }
 
 /* --- Responsive ---------------------------------------------------------- */
 @media (max-width: 1024px) {

@@ -33,6 +33,7 @@ MARKET_HISTORY_PATH: Path = MARKET_DATA_DIR / "market_history.csv"
 NEIGHBORHOOD_META_PATH: Path = MARKET_DATA_DIR / "neighborhood_meta.csv"
 NEIGHBORHOOD_HISTORY_PATH: Path = MARKET_DATA_DIR / "neighborhood_history.csv"
 MARKET_RENTS_PATH: Path = MARKET_DATA_DIR / "market_rents.csv"
+MARKET_HEALTH_PATH: Path = MARKET_DATA_DIR / "market_health.csv"
 
 # Runtime cache for live Zillow fetches.
 MARKET_CACHE_DIR: Path = DATA_DIR / "cache"
@@ -84,6 +85,19 @@ ZILLOW_METRO_ZORI_URL: str = (
     "https://files.zillowstatic.com/research/public_csvs/zori/"
     "Metro_zori_uc_sfrcondomfr_sm_month.csv"
 )
+# US market-health series (metro level, monthly, free).
+ZILLOW_INVENTORY_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/invt_fs/"
+    "Metro_invt_fs_uc_sfrcondo_sm_month.csv"
+)
+ZILLOW_DAYS_PENDING_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/med_doz_pending/"
+    "Metro_med_doz_pending_uc_sfrcondo_sm_month.csv"
+)
+ZILLOW_MEDIAN_SALE_PRICE_URL: str = (
+    "https://files.zillowstatic.com/research/public_csvs/median_sale_price/"
+    "Metro_median_sale_price_uc_sfrcondo_month.csv"
+)
 ZILLOW_ATTRIBUTION: str = (
     "Market data: Zillow Research (ZHVI home values, ZORI rents), latest published month."
 )
@@ -100,6 +114,7 @@ NEIGHBORHOODS_PER_MARKET: int = 12
 MARKET_HISTORY_MONTHS: int = 180
 NEIGHBORHOOD_HISTORY_MONTHS: int = 120
 RENT_HISTORY_MONTHS: int = 60
+MARKET_HEALTH_MONTHS: int = 60
 
 # --------------------------------------------------------------------------- #
 # International markets (BIS residential property prices + UK Land Registry)
@@ -114,15 +129,39 @@ UK_HISTORY_MONTHS: int = 120
 #: Countries exposed by the switcher. ``code`` matches the BIS ``REF_AREA``.
 COUNTRIES: dict[str, dict[str, str]] = {
     "US": {"name": "United States", "source": "Zillow Research"},
-    "GB": {"name": "United Kingdom", "source": "HM Land Registry · BIS"},
     "CA": {"name": "Canada", "source": "BIS"},
-    "AU": {"name": "Australia", "source": "BIS"},
+    "GB": {"name": "United Kingdom", "source": "HM Land Registry · BIS"},
+    "IE": {"name": "Ireland", "source": "BIS"},
+    "DE": {"name": "Germany", "source": "BIS"},
+    "FR": {"name": "France", "source": "BIS"},
+    "NL": {"name": "Netherlands", "source": "BIS"},
+    "CH": {"name": "Switzerland", "source": "BIS"},
+    "SE": {"name": "Sweden", "source": "BIS"},
+    "NO": {"name": "Norway", "source": "BIS"},
+    "IT": {"name": "Italy", "source": "BIS"},
+    "ES": {"name": "Spain", "source": "BIS"},
+    "PL": {"name": "Poland", "source": "BIS"},
+    "TR": {"name": "Türkiye", "source": "BIS"},
+    "JP": {"name": "Japan", "source": "BIS"},
+    "KR": {"name": "Korea", "source": "BIS"},
     "CN": {"name": "China", "source": "BIS"},
+    "HK": {"name": "Hong Kong SAR", "source": "BIS"},
+    "SG": {"name": "Singapore", "source": "BIS"},
+    "IN": {"name": "India", "source": "BIS"},
+    "ID": {"name": "Indonesia", "source": "BIS"},
+    "AU": {"name": "Australia", "source": "BIS"},
+    "NZ": {"name": "New Zealand", "source": "BIS"},
+    "MX": {"name": "Mexico", "source": "BIS"},
+    "BR": {"name": "Brazil", "source": "BIS"},
     "ZA": {"name": "South Africa", "source": "BIS"},
 }
 
 #: Display order of the country switcher.
-COUNTRY_ORDER: list[str] = ["US", "GB", "CA", "AU", "CN", "ZA"]
+COUNTRY_ORDER: list[str] = list(COUNTRIES)
+
+#: Curated subset shown in cross-country comparison charts (all others remain
+#: available in the switcher).
+COMPARISON_COUNTRIES: list[str] = ["US", "GB", "CA", "AU", "CN", "JP", "DE", "IN"]
 
 #: UK nations available in the UK regional view (HM Land Registry slugs).
 UK_NATIONS: dict[str, str] = {

@@ -29,8 +29,9 @@ def test_sidebar_payload_has_countries_and_markets() -> None:
     history = market_data.load_market_history()
     bis = international_data.load_bis_index()
     country_summary = international_data.build_country_summary(bis)
+    health = market_data.load_market_health()
 
-    payload = build_site._build_sidebar_payload(summary, history, bis, country_summary)
+    payload = build_site._build_sidebar_payload(summary, history, bis, country_summary, health)
     data = json.loads(payload["json"])
 
     assert len(data["countries"]) == len(config.COUNTRY_ORDER)
@@ -43,6 +44,11 @@ def test_sidebar_payload_has_countries_and_markets() -> None:
     assert "yoy_history" in data["countries"][0]
     assert {"change", "yoy_history", "yield", "rent"}.issubset(data["markets"][0].keys())
     assert "yoy_history" in data["markets"][0]
+
+    # US market-health fields.
+    assert {"days_to_pending", "inventory", "median_sale_price", "health_history"}.issubset(
+        data["markets"][0].keys()
+    )
 
     # Selector options rendered server-side.
     assert 'value="US"' in payload["country_options"]

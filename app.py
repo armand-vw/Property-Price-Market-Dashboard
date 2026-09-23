@@ -666,6 +666,7 @@ def render_markets_tab(
     summary: pd.DataFrame,
     history: pd.DataFrame,
     hoods: pd.DataFrame,
+    health: pd.DataFrame,
     source: str,
 ) -> None:
     """Live market overview, trend and cross-market comparison."""
@@ -696,6 +697,23 @@ def render_markets_tab(
             kpi_card("Gross Rental Yield", f"{market_row.gross_yield_pct:.1f}%", "Annual rent ÷ home value")
         else:
             kpi_card("Gross Rental Yield", "n/a", "Rent data unavailable")
+
+    health_1, health_2, health_3, health_4 = st.columns(4)
+    with health_1:
+        if pd.notna(market_row.days_to_pending):
+            kpi_card("Days to Pending", f"{market_row.days_to_pending:.0f}", "Median, latest month")
+        else:
+            kpi_card("Days to Pending", "n/a", "Market health unavailable")
+    with health_2:
+        if pd.notna(market_row.inventory):
+            kpi_card("For-Sale Inventory", f"{market_row.inventory:,.0f}", "Active listings")
+        else:
+            kpi_card("For-Sale Inventory", "n/a", "Market health unavailable")
+    with health_3:
+        if pd.notna(market_row.median_sale_price):
+            kpi_card("Median Sale Price", dollars(market_row.median_sale_price), "Closed sales")
+        else:
+            kpi_card("Median Sale Price", "n/a", "Market health unavailable")
 
     st.markdown("<br/>", unsafe_allow_html=True)
 
@@ -798,6 +816,37 @@ def render_markets_tab(
         yield_chart.update_xaxes(ticksuffix="%")
         yield_chart = style_figure(yield_chart, height=460)
         st.plotly_chart(yield_chart, width="stretch")
+
+    st.markdown("#### Market Health Trend")
+    market_health = health[health["market_id"] == market_row.market_id] if not health.empty else health
+    if not market_health.empty:
+        health_col_1, health_col_2 = st.columns(2)
+        with health_col_1:
+            st.markdown("##### For-Sale Inventory")
+            inventory = market_health[market_health["metric"] == "inventory"].sort_values("month")
+            inventory_chart = go.Figure(
+                go.Scatter(
+                    x=inventory["month"], y=inventory["value"], mode="lines",
+                    line=dict(color=config.COLORS["accent"], width=2.5),
+                    fill="tozeroy", fillcolor="rgba(14,165,233,0.08)",
+                    hovertemplate="%{x|%b %Y}<br>%{y:,.0f}<extra></extra>",
+                )
+            )
+            inventory_chart.update_yaxes(tickformat=",")
+            st.plotly_chart(style_figure(inventory_chart, 320), width="stretch")
+        with health_col_2:
+            st.markdown("##### Days to Pending")
+            pending = market_health[market_health["metric"] == "days_to_pending"].sort_values("month")
+            pending_chart = go.Figure(
+                go.Scatter(
+                    x=pending["month"], y=pending["value"], mode="lines",
+                    line=dict(color=config.COLORS["primary"], width=2.5),
+                    hovertemplate="%{x|%b %Y}<br>%{y:.0f} days<extra></extra>",
+                )
+            )
+            st.plotly_chart(style_figure(pending_chart, 320), width="stretch")
+    else:
+        st.info("No market-health data available for this market.")
 
     st.markdown(f"#### Neighborhood Home Values — {market_row.market}")
     table = hoods.sort_values("latest_value", ascending=False)[
@@ -1069,7 +1118,7 @@ def _render_us_dashboard(data, model, metrics, importance, hood_meta, force_refr
         ["🌎 Markets", "📊 Market Analytics", "🤖 Model Insights", "🗂️ Data Explorer"]
     )
     with tab_markets:
-        render_markets_tab(market_row, summary, history, hoods, source)
+        render_markets_tab(market_row, summary, history, hoods, overview["health"], source)
     with tab_analytics:
         if display.empty:
             st.warning("No listings match the current filters.")

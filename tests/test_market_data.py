@@ -111,3 +111,23 @@ def test_offline_mode_uses_snapshot(monkeypatch) -> None:
     data = market_data.get_market_data(force_refresh=True)
     assert data["source"] == "snapshot"
     assert not data["summary"].empty
+
+
+def test_merge_health_adds_metrics() -> None:
+    markets = market_data.load_markets()
+    summary = market_data.build_market_summary(markets, market_data.load_market_history())
+    merged = market_data.merge_health(summary, market_data.load_market_health())
+
+    for metric in market_data.HEALTH_METRICS:
+        assert metric in merged.columns
+    assert merged["inventory"].notna().all()
+    assert (merged["days_to_pending"] > 0).all()
+    assert (merged["median_sale_price"] > 0).all()
+
+
+def test_merge_health_handles_empty() -> None:
+    markets = market_data.load_markets()
+    summary = market_data.build_market_summary(markets, market_data.load_market_history())
+    merged = market_data.merge_health(summary, pd.DataFrame(columns=["market_id", "metric", "month", "value"]))
+    for metric in market_data.HEALTH_METRICS:
+        assert merged[metric].isna().all()

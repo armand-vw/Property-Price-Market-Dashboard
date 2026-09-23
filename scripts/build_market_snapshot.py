@@ -151,6 +151,33 @@ def select_rents(zori: pd.DataFrame, markets: pd.DataFrame) -> pd.DataFrame:
     return long.sort_values(["market_id", "month"]).reset_index(drop=True)
 
 
+def select_health(
+    raw_by_metric: dict[str, pd.DataFrame],
+    markets: pd.DataFrame,
+    months: int = config.MARKET_HEALTH_MONTHS,
+) -> pd.DataFrame:
+    """Reduce the metro market-health files to a tidy long frame."""
+    market_ids = set(markets["market_id"].tolist())
+    frames: list[pd.DataFrame] = []
+
+    for metric, raw in raw_by_metric.items():
+        month_cols = month_columns(list(raw.columns))[-months:]
+        subset = raw[raw["RegionID"].astype(int).isin(market_ids)].copy()
+        subset["market_id"] = subset["RegionID"].astype(int)
+        long = subset.melt(
+            id_vars=["market_id"],
+            value_vars=month_cols,
+            var_name="month",
+            value_name="value",
+        ).dropna(subset=["value"])
+        long["metric"] = metric
+        frames.append(long[["market_id", "metric", "month", "value"]])
+
+    return pd.concat(frames, ignore_index=True).sort_values(
+        ["metric", "market_id", "month"]
+    ).reset_index(drop=True)
+
+
 def select_neighborhoods(
     raw_path: Path,
     markets: pd.DataFrame,
@@ -278,12 +305,25 @@ def main() -> None:
     market_history.to_csv(config.MARKET_HISTORY_PATH, index=False)
     print(f"  selected {len(markets)} metros: {', '.join(markets['market'].head(5))}, ...")
 
-    print("[2/4] Metro rents")
+    print("[2/5] Metro rents")
     rents_path = download(config.ZILLOW_METRO_ZORI_URL, cache_dir / "metro_zori.csv", args.redownload)
     rents = select_rents(pd.read_csv(rents_path, low_memory=False), markets)
     rents.to_csv(config.MARKET_RENTS_PATH, index=False)
 
-    print("[3/4] Neighbourhood home values")
+    print("[3/5] Metro market health (inventory, days to pending, sale price)")
+    health_sources = {
+        "days_to_pending": (config.ZILLOW_DAYS_PENDING_URL, "health_doz.csv"),
+        "inventory": (config.ZILLOW_INVENTORY_URL, "health_invt.csv"),
+        "median_sale_price": (config.ZILLOW_MEDIAN_SALE_PRICE_URL, "health_sale_price.csv"),
+    }
+    health_raw = {
+        metric: pd.read_csv(download(url, cache_dir / filename, args.redownload), low_memory=False)
+        for metric, (url, filename) in health_sources.items()
+    }
+    health = select_health(health_raw, markets)
+    health.to_csv(config.MARKET_HEALTH_PATH, index=False)
+
+    print("[4/5] Neighbourhood home values")
     hood_path = download(
         config.ZILLOW_NEIGHBORHOOD_ZHVI_URL,
         cache_dir / "neighborhood_zhvi.csv",
@@ -293,11 +333,12 @@ def main() -> None:
     hood_meta.to_csv(config.NEIGHBORHOOD_META_PATH, index=False)
     hood_history.to_csv(config.NEIGHBORHOOD_HISTORY_PATH, index=False)
 
-    print("[4/4] Done")
+    print("[5/5] Done")
     print("-" * 62)
     print(f"Markets              : {len(markets)}")
     print(f"Market history rows  : {len(market_history):,}")
     print(f"Rent history rows    : {len(rents):,}")
+    print(f"Market health rows   : {len(health):,}")
     print(f"Neighborhoods        : {len(hood_meta)}")
     print(f"Hood history rows    : {len(hood_history):,}")
     print(f"Snapshot directory   : {config.MARKET_DATA_DIR}")
@@ -305,6 +346,7 @@ def main() -> None:
         config.MARKETS_PATH,
         config.MARKET_HISTORY_PATH,
         config.MARKET_RENTS_PATH,
+        config.MARKET_HEALTH_PATH,
         config.NEIGHBORHOOD_META_PATH,
         config.NEIGHBORHOOD_HISTORY_PATH,
     ):

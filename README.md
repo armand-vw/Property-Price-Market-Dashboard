@@ -16,13 +16,13 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 </p>
 
 
-> **Data:** US market values, rents and trends are **real monthly data from
-> [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI home values,
-> ZORI rents). International data comes from the **Bank for International
-> Settlements** (BIS residential property prices) and **HM Land Registry**
-> (UK House Price Index), each fetched live where possible with a committed
-> snapshot fallback. Listing-level features are synthesised and calibrated to
-> each neighbourhood's real median value.
+> **Data:** US market values, rents, health and trends are **real monthly data
+> from [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI, ZORI,
+> inventory, days-to-pending, median sale price). International data comes from
+> the **Bank for International Settlements** (26 countries) and **HM Land
+> Registry** (UK House Price Index), each fetched live where possible with a
+> committed snapshot fallback. Listing-level features are synthesised and
+> calibrated to each neighbourhood's real median value.
 
 ---
 
@@ -58,10 +58,13 @@ market snapshot and fitted model are committed, so it even runs fully offline
 
 ## ✨ Highlights
 
-- **Six countries** — switch between the **United States, United Kingdom,
-  Canada, Australia, China and South Africa**. Non-US countries show real
-  national BIS house-price indices and a cross-country comparison; the UK adds
-  regional average prices from HM Land Registry.
+- **26 countries** — switch between the US plus 25 international markets
+  (UK, Canada, Australia, Germany, France, Japan, China, India, Brazil and more).
+  Non-US countries show real national BIS house-price indices and a curated
+  cross-country comparison; the UK adds regional average prices from HM Land
+  Registry.
+- **US market health** — median days to pending, for-sale inventory and median
+  sale price per metro (Zillow), surfaced in the app and the Pages sidebar.
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
   Dallas, Houston, Washington DC, Philadelphia, Miami, Atlanta, Boston, Phoenix,
   San Francisco, Riverside, Detroit, Seattle) — real monthly median home values
@@ -102,6 +105,7 @@ Property-Price-Market-Dashboard/
 │   ├── markets.csv              # 15 US metros
 │   ├── market_history.csv       # monthly metro home values
 │   ├── market_rents.csv         # monthly metro rents (ZORI)
+│   ├── market_health.csv        # inventory, days-to-pending, median sale price
 │   ├── neighborhood_meta.csv    # neighbourhood values + price anchors
 │   ├── neighborhood_history.csv # monthly neighbourhood home values
 │   └── international/
@@ -197,7 +201,9 @@ home value) by geography. The app:
    and falls back to the committed snapshot on any network error;
 2. reads **neighbourhood** values from the committed snapshot produced by
    `scripts/build_market_snapshot.py`, which downloads the ~100 MB neighbourhood
-   file once and reduces it to the 15 markets × top 12 neighbourhoods.
+   file once and reduces it to the 15 markets × top 12 neighbourhoods;
+3. pulls **market-health** series (for-sale inventory, median days to pending,
+   median sale price) for the same 15 metros into `market_data/market_health.csv`.
 
 For each market the app derives the latest median value, month-over-month,
 year-over-year and 5-year changes, a 10-year trend, and — from the ZORI rent
@@ -207,18 +213,19 @@ Actions workflow rebuilds the committed snapshot monthly.
 
 ### 2. International data (`international_data.py`)
 
-The country switcher adds six markets:
+The country switcher covers **26 markets** (US + 25 countries):
 
 - **BIS** *Selected Residential Property Prices* — nominal house-price index
-  (`2010 = 100`) and year-on-year change, quarterly, national, for the **US, UK,
-  Canada, Australia, China and South Africa**. A small (~135 KB) bulk file
-  fetched live with a 24-hour cache and snapshot fallback.
+  (`2010 = 100`) and year-on-year change, quarterly, national. A small (~135 KB)
+  bulk file fetched live with a 24-hour cache and snapshot fallback. A curated
+  subset (`config.COMPARISON_COUNTRIES`) is used in comparison charts, while the
+  full list remains selectable.
 - **HM Land Registry** *UK House Price Index* — monthly average price (GBP), HPI
   and annual change for the four UK nations, served from a committed snapshot.
 
 Non-US countries show national, index-based insights and a cross-country
-comparison. Only the US exposes listing-level valuation (the model is anchored
-to real US medians); the app states this explicitly.
+comparison. Only the US exposes listing-level valuation and market health (the
+model is anchored to real US medians); the app states this explicitly.
 
 ### 3. Market-anchored synthesis (`data_loader.py`)
 
@@ -289,11 +296,16 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 - **Executive KPI row** — listings, the selected market's **real** median value
   and YoY, model accuracy (100 − MAPE) and R².
 - **🌎 Markets** (US) — live median value, MoM/YoY/5-year changes, rent and gross
-  rental yield, a 10-year value trend, latest-value / YoY / yield comparison
-  across all 15 markets, and a real neighbourhood value table.
+  rental yield, **market health** (days to pending, inventory, median sale
+  price), a 10-year value trend, latest-value / YoY / yield comparison across
+  all 15 markets, and a real neighbourhood value table.
 - **🌍 International** (non-US) — national BIS house-price index, YoY and 5-year
-  change, index/YoY trends, a **cross-country** growth comparison, and (for the
+  change, index/YoY trends, a curated **cross-country** comparison, and (for the
   UK) a nation-level price table from HM Land Registry.
+- **🖥️ Static Pages sidebar** — the GitHub Pages demo has a pinned sidebar that
+  switches country (26) and US market (15) entirely client-side, updating KPI
+  cards, market health, and trend/YoY charts; the selection is reflected in the
+  URL hash for sharing.
 - **📊 Market Analytics** — price-per-sqft scatter by location (colour-coded by
   age band), median listing price by location, and feature importances.
 - **🤖 Model Insights** — metric cards, predicted-vs-actual parity and residual
@@ -345,8 +357,9 @@ feature-importance aggregation and inference ranges.
 ## 🗺️ Roadmap
 
 - [x] Add rents (ZORI) and gross rental yield per market.
-- [x] Six-country switcher (US, UK, Canada, Australia, China, South Africa).
-- [ ] Add inventory, days-on-market and sale-to-list metrics.
+- [x] 26-market country switcher (US + 25 countries).
+- [x] US market health (inventory, days-to-pending, median sale price).
+- [ ] Add days-on-market / sale-to-list and price-cut share.
 - [ ] Swap synthetic listings for a real listing-level dataset behind the same
       loader interface.
 - [ ] SHAP values for per-prediction explainability.

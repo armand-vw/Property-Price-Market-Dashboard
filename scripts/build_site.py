@@ -36,6 +36,7 @@ from data_loader import load_or_create_data  # noqa: E402
 from model import ensure_model  # noqa: E402
 
 REPO_URL = "https://github.com/armand-vw/Property-Price-Market-Dashboard"
+PAGES_URL = "https://armand-vw.github.io/Property-Price-Market-Dashboard/"
 
 DOCS_DIR = config.BASE_DIR / "docs"
 INDEX_PATH = DOCS_DIR / "index.html"
@@ -187,6 +188,7 @@ def _build_sidebar_payload(
     history: pd.DataFrame,
     bis: pd.DataFrame,
     country_summary: pd.DataFrame,
+    health: pd.DataFrame,
 ) -> dict[str, str]:
     """Serialise the data and options for the interactive page sidebar."""
     countries: list[dict] = []
@@ -223,6 +225,15 @@ def _build_sidebar_payload(
         group = history[history["market_id"] == row.market_id].sort_values("month").tail(132)
         group = group.reset_index(drop=True)
         yoy_series = group["value"] / group["value"].shift(12) * 100.0 - 100.0
+        market_health = health[health["market_id"] == row.market_id]
+
+        def _metric(name: str, _market_health: pd.DataFrame = market_health) -> float | None:
+            series = _market_health[_market_health["metric"] == name].sort_values("month")
+            return _num(series["value"].iloc[-1]) if not series.empty else None
+
+        inventory = market_health[market_health["metric"] == "inventory"].sort_values("month")
+        pending = market_health[market_health["metric"] == "days_to_pending"].sort_values("month")
+
         markets.append(
             {
                 "id": int(row.market_id),
@@ -233,6 +244,9 @@ def _build_sidebar_payload(
                 "change": _num(getattr(row, "change_5y_pct", None)),
                 "rent": _num(getattr(row, "latest_rent", None)),
                 "yield": _num(getattr(row, "gross_yield_pct", None)),
+                "days_to_pending": _metric("days_to_pending"),
+                "inventory": _metric("inventory"),
+                "median_sale_price": _metric("median_sale_price"),
                 "source": "Zillow Research · monthly",
                 "history": [
                     [date.strftime("%Y-%m-%d"), _num(value)]
@@ -243,6 +257,18 @@ def _build_sidebar_payload(
                     for date, value in zip(group["month"], yoy_series, strict=False)
                     if _num(value) is not None
                 ],
+                "health_history": {
+                    "inventory": [
+                        [date.strftime("%Y-%m-%d"), _num(value)]
+                        for date, value in zip(inventory["month"], inventory["value"], strict=False)
+                        if _num(value) is not None
+                    ],
+                    "days_to_pending": [
+                        [date.strftime("%Y-%m-%d"), _num(value)]
+                        for date, value in zip(pending["month"], pending["value"], strict=False)
+                        if _num(value) is not None
+                    ],
+                },
             }
         )
 
@@ -289,9 +315,12 @@ TEMPLATE = r"""<!DOCTYPE html>
 <title>Real Estate Price Estimator &amp; Market Insights Dashboard</title>
 <meta name="description" content="Interactive real-estate price estimator and market insights dashboard with live Zillow market data, Streamlit, XGBoost, scikit-learn and Plotly." />
 <meta property="og:title" content="Real Estate Price Estimator &amp; Market Insights" />
-<meta property="og:description" content="Live US market data, gradient-boosted valuation and a live price estimation tool." />
+<meta property="og:description" content="Live US market data, six-plus international markets, gradient-boosted valuation." />
 <meta property="og:type" content="website" />
-<link rel="stylesheet" href="style.css" />
+<meta property="og:image" content="__PAGES_URL__hero.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="__PAGES_URL__hero.png" />
+<link rel="stylesheet" href="style.css?v=__ASSET_VERSION__" />
 <script src="__PLOTLY_CDN__"></script>
 </head>
 <body>
@@ -360,6 +389,14 @@ TEMPLATE = r"""<!DOCTYPE html>
       <div class="mini-kpi"><span id="k2l">Metric</span><strong id="k2v">—</strong><span id="k2s"></span></div>
       <div class="mini-kpi"><span id="k3l">Metric</span><strong id="k3v">—</strong><span id="k3s"></span></div>
       <div class="mini-kpi"><span id="k4l">Metric</span><strong id="k4v">—</strong><span id="k4s"></span></div>
+    </div>
+    <div id="healthWrap">
+      <div class="kpis-row">
+        <div class="mini-kpi"><span>Days to Pending</span><strong id="h1v">—</strong><span>Median, latest month</span></div>
+        <div class="mini-kpi"><span>For-Sale Inventory</span><strong id="h2v">—</strong><span>Active listings</span></div>
+        <div class="mini-kpi"><span>Median Sale Price</span><strong id="h3v">—</strong><span>Closed sales</span></div>
+      </div>
+      <div class="chart-card"><h3>Market Health (US)</h3><p class="muted">For-sale inventory and median days to pending for the selected metro.</p><div id="explorerHealth"></div></div>
     </div>
     <div class="chart-card"><div id="explorerChart"></div></div>
     <div class="chart-card"><h3>Year-over-Year Change</h3><p class="muted">Annual change for the selected market / country.</p><div id="explorerYoy"></div></div>
@@ -459,15 +496,18 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
   var countrySel = document.getElementById("countrySelect");
   var marketSel = document.getElementById("marketSelect");
   var marketWrap = document.getElementById("marketWrap");
+  var healthWrap = document.getElementById("healthWrap");
   var titleEl = document.getElementById("dashTitle");
   var subEl = document.getElementById("dashSub");
   var trendEl = document.getElementById("explorerChart");
   var yoyEl = document.getElementById("explorerYoy");
+  var healthEl = document.getElementById("explorerHealth");
 
+  function setText(id, value) { var el = document.getElementById(id); if (el) { el.textContent = value; } }
   function setKpi(i, label, value, sub) {
-    document.getElementById("k" + i + "l").textContent = label;
-    document.getElementById("k" + i + "v").textContent = value;
-    document.getElementById("k" + i + "s").textContent = sub || "";
+    setText("k" + i + "l", label);
+    setText("k" + i + "v", value);
+    setText("k" + i + "s", sub || "");
   }
   function isNum(v) { return v !== null && v !== undefined && !isNaN(v); }
   function money(v) {
@@ -506,9 +546,37 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
       hovertemplate: "%{x|%b %Y}<br>%{y:.1f}%<extra></extra>"
     }], layout(title, false), { displayModeBar: false, responsive: true });
   }
+  function drawHealth(health, name) {
+    var inv = (health && health.inventory) || [];
+    var doz = (health && health.days_to_pending) || [];
+    Plotly.react(healthEl, [
+      {
+        x: inv.map(function (p) { return p[0]; }), y: inv.map(function (p) { return p[1]; }),
+        mode: "lines", name: "For-sale inventory",
+        line: { color: "#0EA5E9", width: 2.5 }, yaxis: "y",
+        hovertemplate: "%{x|%b %Y}<br>%{y:,.0f}<extra>Inventory</extra>"
+      },
+      {
+        x: doz.map(function (p) { return p[0]; }), y: doz.map(function (p) { return p[1]; }),
+        mode: "lines", name: "Days to pending",
+        line: { color: "#4F46E5", width: 2.5 }, yaxis: "y2",
+        hovertemplate: "%{x|%b %Y}<br>%{y:.0f} days<extra>Pending</extra>"
+      }
+    ], {
+      title: { text: name + " — market health", font: { size: 15 } },
+      template: "plotly_white", height: 340,
+      margin: { l: 60, r: 60, t: 50, b: 40 },
+      legend: { orientation: "h", y: 1.12, x: 0 },
+      yaxis: { title: "Inventory", tickformat: ",", gridcolor: "#E2E8F0" },
+      yaxis2: { title: "Days to pending", overlaying: "y", side: "right", showgrid: false },
+      xaxis: { showgrid: false },
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
+    }, { displayModeBar: false, responsive: true });
+  }
   function renderMarket() {
     var m = DATA.markets.filter(function (x) { return String(x.id) === marketSel.value; })[0];
     if (!m) { return; }
+    if (healthWrap) { healthWrap.style.display = "block"; }
     titleEl.textContent = m.name;
     subEl.textContent = "Zillow Research · monthly · latest " + m.month;
     setKpi(1, "Median Home Value", money(m.latest), "Latest " + m.month);
@@ -516,8 +584,12 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     setKpi(3, "5-Year Change", pct(m.change), "Nominal");
     setKpi(4, "Gross Rental Yield", isNum(m.yield) ? m.yield.toFixed(1) + "%" : "n/a",
            isNum(m.rent) ? "Rent " + money(m.rent) + "/mo" : "ZORI");
+    setText("h1v", isNum(m.days_to_pending) ? Math.round(m.days_to_pending).toString() : "n/a");
+    setText("h2v", isNum(m.inventory) ? Math.round(m.inventory).toLocaleString() : "n/a");
+    setText("h3v", money(m.median_sale_price));
     drawTrend(m.history, m.name + " — median home value", true);
     drawYoy(m.yoy_history, m.name + " — year-over-year change");
+    drawHealth(m.health_history, m.name);
   }
   function renderCountry() {
     var code = countrySel.value;
@@ -527,6 +599,7 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
       return;
     }
     marketWrap.style.display = "none";
+    if (healthWrap) { healthWrap.style.display = "none"; }
     var c = DATA.countries.filter(function (x) { return x.code === code; })[0];
     if (!c) { return; }
     titleEl.textContent = c.name;
@@ -538,10 +611,36 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
     drawTrend(c.history, c.name + " — house price index (2010 = 100)", false);
     drawYoy(c.yoy_history, c.name + " — year-over-year change");
   }
+  function readHash() {
+    var out = {};
+    var raw = (location.hash || "").replace(/^#/, "");
+    raw.split("&").forEach(function (pair) {
+      var kv = pair.split("=");
+      if (kv[0]) { out[decodeURIComponent(kv[0])] = decodeURIComponent(kv[1] || ""); }
+    });
+    return out;
+  }
+  function writeHash() {
+    var parts = ["country=" + encodeURIComponent(countrySel.value)];
+    if (countrySel.value === "US") { parts.push("market=" + encodeURIComponent(marketSel.value)); }
+    var hash = "#" + parts.join("&");
+    try { history.replaceState(null, "", hash); } catch (err) { location.hash = hash; }
+  }
+  function applyHash() {
+    var params = readHash();
+    if (params.country && DATA.countries.some(function (c) { return c.code === params.country; })) {
+      countrySel.value = params.country;
+    }
+    if (params.market && DATA.markets.some(function (m) { return String(m.id) === params.market; })) {
+      marketSel.value = params.market;
+    }
+  }
 
-  countrySel.addEventListener("change", renderCountry);
-  marketSel.addEventListener("change", renderMarket);
+  applyHash();
+  countrySel.addEventListener("change", function () { renderCountry(); writeHash(); });
+  marketSel.addEventListener("change", function () { renderMarket(); writeHash(); });
   renderCountry();
+  writeHash();
 })();
 </script>
 
@@ -557,16 +656,20 @@ def render_page(
     comparison: pd.DataFrame,
     bis: pd.DataFrame,
     country_summary: pd.DataFrame,
+    health: pd.DataFrame,
     metrics: dict,
     importance: pd.DataFrame,
 ) -> str:
     """Populate the template with data, metrics and chart fragments."""
     top_drivers = ", ".join(importance.head(4)["feature"].tolist())
     median_metro = summary["latest_value"].median()
-    sidebar = _build_sidebar_payload(summary, history, bis, country_summary)
+    sidebar = _build_sidebar_payload(summary, history, bis, country_summary, health)
+    build_stamp = datetime.now(UTC)
     replacements = {
         "__PLOTLY_CDN__": plotly_js_cdn(),
         "__REPO_URL__": REPO_URL,
+        "__PAGES_URL__": PAGES_URL,
+        "__ASSET_VERSION__": build_stamp.strftime("%Y%m%d%H%M"),
         "__MARKETS__": f"{df['market'].nunique()}",
         "__LOCATIONS__": f"{df['neighborhood'].nunique()}",
         "__MEDIAN_PRICE__": money(median_metro),
@@ -606,14 +709,20 @@ def main() -> None:
     overview = market_data.get_market_data()
     summary = overview["summary"]
     history = overview["history"]
+    health = overview["health"]
     intl = international_data.get_country_data()
     comparison = intl["comparison"]
     bis = intl["bis"]
 
     page = render_page(
-        data, summary, history, comparison, bis, intl["summary"], metrics, importance
+        data, summary, history, comparison, bis, intl["summary"], health, metrics, importance
     )
     INDEX_PATH.write_text(page, encoding="utf-8")
+
+    # Publish a hero image for social previews (Pages serves only docs/).
+    hero_source = PROJECT_ROOT / "assets" / "hero.png"
+    if hero_source.exists():
+        (DOCS_DIR / "hero.png").write_bytes(hero_source.read_bytes())
 
     print("=" * 62)
     print("GitHub Pages site generated")

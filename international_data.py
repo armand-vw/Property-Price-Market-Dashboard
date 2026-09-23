@@ -205,9 +205,13 @@ def build_country_summary(bis: pd.DataFrame) -> pd.DataFrame:
 
 
 def build_comparison(bis: pd.DataFrame, quarters: int = config.INTERNATIONAL_HISTORY_QUARTERS) -> pd.DataFrame:
-    """Index each country to 100 at the start of a common window (pure function)."""
+    """Index each country to 100 at the start of a common window (pure function).
+
+    Uses the curated :data:`config.COMPARISON_COUNTRIES` so the chart stays
+    readable; every country remains available in the switcher.
+    """
     frames: list[pd.DataFrame] = []
-    for code in config.COUNTRY_ORDER:
+    for code in config.COMPARISON_COUNTRIES:
         group = bis[bis["country_code"] == code].sort_values("period").tail(quarters).copy()
         if group.empty:
             continue

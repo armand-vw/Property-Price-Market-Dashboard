@@ -74,6 +74,13 @@ def load_market_rents() -> pd.DataFrame:
     return rents
 
 
+def load_market_health() -> pd.DataFrame:
+    """Load committed US metro market-health series (long format)."""
+    health = pd.read_csv(config.MARKET_HEALTH_PATH, parse_dates=["month"])
+    health["market_id"] = health["market_id"].astype(int)
+    return health
+
+
 # --------------------------------------------------------------------------- #
 # Live metro fetch (with cache + fallback)
 # --------------------------------------------------------------------------- #
@@ -258,6 +265,30 @@ def merge_rents(summary: pd.DataFrame, rents: pd.DataFrame) -> pd.DataFrame:
     return merged
 
 
+#: Market-health metrics merged into the summary from the committed snapshot.
+HEALTH_METRICS: list[str] = ["days_to_pending", "inventory", "median_sale_price"]
+
+
+def merge_health(summary: pd.DataFrame, health: pd.DataFrame) -> pd.DataFrame:
+    """Add the latest market-health metrics to a summary (pure function)."""
+    if health.empty:
+        for metric in HEALTH_METRICS:
+            summary[metric] = float("nan")
+        return summary
+
+    latest = health.sort_values("month").groupby(["market_id", "metric"]).tail(1)
+    pivot = (
+        latest.pivot(index="market_id", columns="metric", values="value")
+        .reset_index()
+        .rename_axis(columns=None)
+    )
+    merged = summary.merge(pivot, on="market_id", how="left")
+    for metric in HEALTH_METRICS:
+        if metric not in merged.columns:
+            merged[metric] = float("nan")
+    return merged
+
+
 def get_market_data(force_refresh: bool = False) -> dict:
     """Return the current market overview, rents and history.
 
@@ -283,12 +314,15 @@ def get_market_data(force_refresh: bool = False) -> dict:
         rents = load_market_rents()
 
     summary = merge_rents(build_market_summary(markets, history), rents)
+    health = load_market_health()
+    summary = merge_health(summary, health)
     LAST_SOURCE = source
     LAST_FETCHED = datetime.now(UTC)
     return {
         "summary": summary,
         "history": history,
         "rents": rents,
+        "health": health,
         "source": source,
         "fetched_at": LAST_FETCHED,
     }
