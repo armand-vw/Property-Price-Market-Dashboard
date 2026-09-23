@@ -1,8 +1,9 @@
-"""Tests for the static GitHub Pages site builders (Plotly dropdowns)."""
+"""Tests for the static GitHub Pages site builders (Explorer sidebar)."""
 
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 
 import config
@@ -19,18 +20,26 @@ def _load_build_site():
     return module
 
 
-def test_market_explorer_has_dropdown() -> None:
+def test_sidebar_payload_has_countries_and_markets() -> None:
     build_site = _load_build_site()
-    html = build_site.build_market_explorer(
-        market_data.load_market_history(), market_data.load_markets()
+
+    summary = market_data.build_market_summary(
+        market_data.load_markets(), market_data.load_market_history()
     )
-    assert "updatemenus" in html
-    # One button per market plus the "All markets" option.
-    assert html.count('"label"') == config.TOP_N_MARKETS + 1
+    history = market_data.load_market_history()
+    bis = international_data.load_bis_index()
+    country_summary = international_data.build_country_summary(bis)
 
+    payload = build_site._build_sidebar_payload(summary, history, bis, country_summary)
+    data = json.loads(payload["json"])
 
-def test_country_explorer_has_dropdown() -> None:
-    build_site = _load_build_site()
-    html = build_site.build_country_explorer(international_data.load_bis_index())
-    assert "updatemenus" in html
-    assert html.count('"label"') == len(config.COUNTRY_ORDER) + 1
+    assert len(data["countries"]) == len(config.COUNTRY_ORDER)
+    assert len(data["markets"]) == config.TOP_N_MARKETS
+    assert data["countries"][0]["code"] == "US"
+    assert all(item["history"] for item in data["countries"])
+    assert all(item["history"] for item in data["markets"])
+
+    # Selector options rendered server-side.
+    assert 'value="US"' in payload["country_options"]
+    assert payload["country_options"].count("<option") == len(config.COUNTRY_ORDER)
+    assert payload["market_options"].count("<option") == config.TOP_N_MARKETS

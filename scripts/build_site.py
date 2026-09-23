@@ -15,6 +15,7 @@ Usage
 from __future__ import annotations
 
 import html
+import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -171,135 +172,65 @@ def build_country_growth(comparison: pd.DataFrame) -> str:
     return fig_to_html(style_fig(fig, 500))
 
 
-def build_market_explorer(history: pd.DataFrame, markets: pd.DataFrame) -> str:
-    """US market trend with a native Plotly dropdown to switch metros."""
-    order = markets.sort_values("size_rank").reset_index(drop=True)
-    fig = go.Figure()
-    for index, row in enumerate(order.itertuples()):
-        series = history[history["market_id"] == row.market_id].sort_values("month")
-        series = series[series["month"] >= series["month"].max() - pd.DateOffset(years=10)]
-        fig.add_trace(
-            go.Scatter(
-                x=series["month"],
-                y=series["value"],
-                mode="lines",
-                name=row.market,
-                visible=(index == 0),
-                showlegend=False,
-                line=dict(
-                    width=2.6,
-                    color=config.CHART_SEQUENCE[index % len(config.CHART_SEQUENCE)],
-                ),
-                hovertemplate="%{x|%b %Y}<br>$%{y:,.0f}<extra>" + row.market + "</extra>",
-            )
-        )
-
-    count = len(order)
-    buttons = [
-        dict(
-            label="All markets",
-            method="update",
-            args=[{"visible": [True] * count}, {"title": {"text": "Median home value — all 15 markets"}}],
-        )
-    ]
-    for index, row in enumerate(order.itertuples()):
-        visible = [False] * count
-        visible[index] = True
-        buttons.append(
-            dict(
-                label=row.market,
-                method="update",
-                args=[{"visible": visible}, {"title": {"text": f"Median home value — {row.market}"}}],
-            )
-        )
-
-    fig = style_fig(fig, 470)
-    fig.update_layout(
-        title="Median home value — all 15 markets",
-        margin=dict(l=20, r=20, t=130, b=20),
-        updatemenus=[
-            dict(
-                buttons=buttons,
-                direction="down",
-                showactive=True,
-                x=0,
-                y=1.16,
-                xanchor="left",
-                yanchor="top",
-                bgcolor="white",
-                bordercolor=config.COLORS["border"],
-            )
-        ],
-    )
-    fig.update_yaxes(tickprefix="$", tickformat=",")
-    return fig_to_html(fig)
-
-
-def build_country_explorer(bis: pd.DataFrame) -> str:
-    """Country index trend with a native Plotly dropdown to switch countries."""
-    fig = go.Figure()
-    for index, code in enumerate(config.COUNTRY_ORDER):
+def _build_sidebar_payload(
+    summary: pd.DataFrame,
+    history: pd.DataFrame,
+    bis: pd.DataFrame,
+    country_summary: pd.DataFrame,
+) -> dict[str, str]:
+    """Serialise the data and options for the interactive page sidebar."""
+    countries: list[dict] = []
+    for code in config.COUNTRY_ORDER:
         group = bis[bis["country_code"] == code].sort_values("period_date").tail(60)
-        fig.add_trace(
-            go.Scatter(
-                x=group["period_date"],
-                y=group["index"],
-                mode="lines",
-                name=config.COUNTRIES[code]["name"],
-                visible=(index == 0),
-                showlegend=False,
-                line=dict(
-                    width=2.6,
-                    color=config.CHART_SEQUENCE[index % len(config.CHART_SEQUENCE)],
-                ),
-                hovertemplate="%{x|%Y}<br>Index %{y:.1f}<extra>"
-                + config.COUNTRIES[code]["name"]
-                + "</extra>",
-            )
-        )
-
-    count = len(config.COUNTRY_ORDER)
-    buttons = [
-        dict(
-            label="All countries",
-            method="update",
-            args=[{"visible": [True] * count}, {"title": {"text": "House price index — all countries"}}],
-        )
-    ]
-    for index, code in enumerate(config.COUNTRY_ORDER):
-        visible = [False] * count
-        visible[index] = True
-        buttons.append(
-            dict(
-                label=config.COUNTRIES[code]["name"],
-                method="update",
-                args=[
-                    {"visible": visible},
-                    {"title": {"text": f"House price index — {config.COUNTRIES[code]['name']}"}},
+        row = country_summary[country_summary["country_code"] == code]
+        if group.empty or row.empty:
+            continue
+        latest = row.iloc[0]
+        countries.append(
+            {
+                "code": code,
+                "name": config.COUNTRIES[code]["name"],
+                "period": str(latest["period"]),
+                "index": float(latest["index"]),
+                "yoy": float(latest["yoy_pct"]),
+                "change": float(latest["change_5y_pct"]),
+                "history": [
+                    [date.strftime("%Y-%m-%d"), float(value)]
+                    for date, value in zip(group["period_date"], group["index"], strict=False)
                 ],
-            )
+            }
         )
 
-    fig = style_fig(fig, 470)
-    fig.update_layout(
-        title="House price index — all countries",
-        showlegend=False,
-        margin=dict(l=20, r=20, t=130, b=20),
-        updatemenus=[
-            dict(
-                buttons=buttons,
-                direction="down",
-                showactive=True,
-                x=0,
-                y=1.16,
-                xanchor="left",
-                yanchor="top",
-                bgcolor="white",
-                bordercolor=config.COLORS["border"],
-            )
-        ],
+    markets: list[dict] = []
+    for row in summary.sort_values("size_rank").itertuples():
+        group = history[history["market_id"] == row.market_id].sort_values("month").tail(120)
+        markets.append(
+            {
+                "id": int(row.market_id),
+                "name": row.market,
+                "latest": float(row.latest_value),
+                "month": pd.to_datetime(row.latest_month).strftime("%b %Y"),
+                "yoy": float(row.yoy_pct),
+                "history": [
+                    [date.strftime("%Y-%m-%d"), float(value)]
+                    for date, value in zip(group["month"], group["value"], strict=False)
+                ],
+            }
+        )
+
+    country_options = "".join(
+        f'<option value="{item["code"]}">{html.escape(item["name"])}</option>'
+        for item in countries
     )
-    return fig_to_html(fig)
+    market_options = "".join(
+        f'<option value="{item["id"]}">{html.escape(item["name"])}</option>'
+        for item in markets
+    )
+    return {
+        "json": json.dumps({"countries": countries, "markets": markets}),
+        "country_options": country_options,
+        "market_options": market_options,
+    }
 
 
 def build_feature_importance(importance: pd.DataFrame) -> str:
@@ -341,6 +272,7 @@ TEMPLATE = r"""<!DOCTYPE html>
   <div class="nav-inner">
     <span class="brand">🏙️ Property&nbsp;Insights</span>
     <nav>
+      <a href="#explorer">Explorer</a>
       <a href="#preview">Preview</a>
       <a href="#model">Model</a>
       <a href="#stack">Stack</a>
@@ -386,11 +318,34 @@ TEMPLATE = r"""<!DOCTYPE html>
   </div>
 </section>
 
+<section id="explorer" class="section">
+  <h2>Market Explorer</h2>
+  <p class="section-lede">Choose a country — and for the US, a market — to update the chart and key figures. Runs entirely in your browser.</p>
+  <div class="explorer">
+    <aside class="explorer-sidebar">
+      <div class="explorer-title">🎛️ Controls</div>
+      <label for="countrySelect">Country</label>
+      <select id="countrySelect" aria-label="Country">__COUNTRY_OPTIONS__</select>
+      <div id="marketWrap">
+        <label for="marketSelect">US Market</label>
+        <select id="marketSelect" aria-label="US market">__MARKET_OPTIONS__</select>
+      </div>
+      <p class="explorer-note">US: Zillow Research (ZHVI). Other countries: BIS national house-price index. Run the full app for live valuation.</p>
+    </aside>
+    <div class="explorer-main">
+      <div class="kpis-row">
+        <div class="mini-kpi"><span id="k1l">Metric</span><strong id="k1v">—</strong><span id="k1s"></span></div>
+        <div class="mini-kpi"><span id="k2l">Metric</span><strong id="k2v">—</strong><span id="k2s"></span></div>
+        <div class="mini-kpi"><span id="k3l">Metric</span><strong id="k3v">—</strong><span id="k3s"></span></div>
+      </div>
+      <div id="explorerChart" class="chart"></div>
+    </div>
+  </div>
+</section>
+
 <section id="preview" class="section">
   <h2>Interactive preview</h2>
-  <p class="section-lede">Use the dropdowns below to switch between US markets and countries. Charts are rendered from real data at build time; run the full app for live valuation.</p>
-  <div class="chart-card"><h3>Explore a US Market</h3><p class="muted">Pick any of the 15 metros to see its 10-year median home-value trend.</p><div class="chart">__CHART_MARKET_EXPLORER__</div></div>
-  <div class="chart-card"><h3>Explore a Country</h3><p class="muted">Pick any of the six countries to see its national BIS house-price index.</p><div class="chart">__CHART_COUNTRY_EXPLORER__</div></div>
+  <p class="section-lede">Rendered from real Zillow market data and the trained model at build time.</p>
   <div class="chart-card"><h3>Median Home Value by Market</h3><p class="muted">Latest published month across the 15 largest US metros.</p><div class="chart">__CHART_VALUES__</div></div>
   <div class="grid grid-2">
     <div class="chart-card"><h3>10-Year Value Growth</h3><p class="muted">Home values indexed to 100 ten years ago — the biggest metros compared.</p><div class="chart">__CHART_GROWTH__</div></div>
@@ -462,6 +417,75 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights</code></pre>
   <p><a href="__REPO_URL__" target="_blank" rel="noopener">Source on GitHub</a> · Generated __GENERATED_AT__</p>
 </footer>
 
+<script>
+(function () {
+  if (typeof Plotly === "undefined") { return; }
+  var DATA = __SIDEBAR_DATA__;
+  var countrySel = document.getElementById("countrySelect");
+  var marketSel = document.getElementById("marketSelect");
+  var marketWrap = document.getElementById("marketWrap");
+  var chartEl = document.getElementById("explorerChart");
+
+  function setKpi(i, label, value, sub) {
+    document.getElementById("k" + i + "l").textContent = label;
+    document.getElementById("k" + i + "v").textContent = value;
+    document.getElementById("k" + i + "s").textContent = sub || "";
+  }
+  function money(v) {
+    if (v >= 1e6) { return "$" + (v / 1e6).toFixed(2) + "M"; }
+    if (v >= 1e3) { return "$" + Math.round(v / 1e3) + "K"; }
+    return "$" + Math.round(v);
+  }
+  function pct(v) { return (v >= 0 ? "+" : "") + v.toFixed(1) + "%"; }
+  function draw(history, title, isMoney) {
+    var x = history.map(function (p) { return p[0]; });
+    var y = history.map(function (p) { return p[1]; });
+    var hover = isMoney
+      ? "%{x|%b %Y}<br>$%{y:,.0f}<extra></extra>"
+      : "%{x|%Y}<br>%{y:.1f}<extra></extra>";
+    Plotly.react(chartEl, [{
+      x: x, y: y, mode: "lines",
+      line: { color: "#4F46E5", width: 3 },
+      fill: "tozeroy", fillcolor: "rgba(79,70,229,0.08)",
+      hovertemplate: hover
+    }], {
+      title: { text: title, font: { size: 16 } },
+      template: "plotly_white", height: 430,
+      margin: { l: 60, r: 20, t: 50, b: 40 },
+      yaxis: { tickprefix: isMoney ? "$" : "", tickformat: "," },
+      paper_bgcolor: "rgba(0,0,0,0)", plot_bgcolor: "rgba(0,0,0,0)"
+    }, { displayModeBar: false, responsive: true });
+  }
+  function renderMarket() {
+    var m = DATA.markets.filter(function (x) { return String(x.id) === marketSel.value; })[0];
+    if (!m) { return; }
+    setKpi(1, "Median Home Value", money(m.latest), "Latest " + m.month);
+    setKpi(2, "Year over Year", pct(m.yoy), "Zillow ZHVI");
+    setKpi(3, "Market", m.name, "US metro");
+    draw(m.history, m.name + " — median home value", true);
+  }
+  function renderCountry() {
+    var code = countrySel.value;
+    if (code === "US") {
+      marketWrap.style.display = "block";
+      renderMarket();
+      return;
+    }
+    marketWrap.style.display = "none";
+    var c = DATA.countries.filter(function (x) { return x.code === code; })[0];
+    if (!c) { return; }
+    setKpi(1, "House Price Index", c.index.toFixed(1), "Latest " + c.period);
+    setKpi(2, "Year over Year", pct(c.yoy), "BIS nominal");
+    setKpi(3, "5-Year Change", pct(c.change), "Nominal index");
+    draw(c.history, c.name + " — house price index (2010 = 100)", false);
+  }
+
+  countrySel.addEventListener("change", renderCountry);
+  marketSel.addEventListener("change", renderMarket);
+  renderCountry();
+})();
+</script>
+
 </body>
 </html>
 """
@@ -472,14 +496,15 @@ def render_page(
     summary: pd.DataFrame,
     history: pd.DataFrame,
     comparison: pd.DataFrame,
-    markets: pd.DataFrame,
     bis: pd.DataFrame,
+    country_summary: pd.DataFrame,
     metrics: dict,
     importance: pd.DataFrame,
 ) -> str:
     """Populate the template with data, metrics and chart fragments."""
     top_drivers = ", ".join(importance.head(4)["feature"].tolist())
     median_metro = summary["latest_value"].median()
+    sidebar = _build_sidebar_payload(summary, history, bis, country_summary)
     replacements = {
         "__PLOTLY_CDN__": plotly_js_cdn(),
         "__REPO_URL__": REPO_URL,
@@ -495,8 +520,9 @@ def render_page(
         "__RMSE__": dollars(metrics.get("rmse", 0)),
         "__BASELINE__": f"{metrics.get('improvement_vs_baseline_pct', 0):.1f}% lower MAE",
         "__TOP_DRIVERS__": html.escape(top_drivers),
-        "__CHART_MARKET_EXPLORER__": build_market_explorer(history, markets),
-        "__CHART_COUNTRY_EXPLORER__": build_country_explorer(bis),
+        "__SIDEBAR_DATA__": sidebar["json"],
+        "__COUNTRY_OPTIONS__": sidebar["country_options"],
+        "__MARKET_OPTIONS__": sidebar["market_options"],
         "__CHART_VALUES__": build_market_values(summary),
         "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_YIELD__": build_rental_yield(summary),
@@ -520,13 +546,12 @@ def main() -> None:
     overview = market_data.get_market_data()
     summary = overview["summary"]
     history = overview["history"]
-    markets = market_data.load_markets()
     intl = international_data.get_country_data()
     comparison = intl["comparison"]
     bis = intl["bis"]
 
     page = render_page(
-        data, summary, history, comparison, markets, bis, metrics, importance
+        data, summary, history, comparison, bis, intl["summary"], metrics, importance
     )
     INDEX_PATH.write_text(page, encoding="utf-8")
 

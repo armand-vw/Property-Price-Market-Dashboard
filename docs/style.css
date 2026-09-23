@@ -228,12 +228,102 @@ tr:last-child th, tr:last-child td { border-bottom: none; }
 }
 .footer p { margin: 4px 0; }
 
+/* --- Market explorer sidebar --------------------------------------------- */
+.explorer {
+  display: flex;
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.explorer-sidebar {
+  flex: 0 0 280px;
+  width: 280px;
+  background: var(--background);
+  border-right: 1px solid var(--border);
+  padding: 22px;
+}
+.explorer-title {
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 8px;
+}
+.explorer-sidebar label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.explorer-sidebar select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+.explorer-sidebar select:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.explorer-note {
+  margin-top: 20px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.explorer-main {
+  flex: 1;
+  min-width: 0;
+  padding: 22px;
+}
+.kpis-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+.mini-kpi {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.mini-kpi span:first-child {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mini-kpi strong {
+  margin: 4px 0 2px;
+  font-size: 1.25rem;
+  color: var(--ink);
+}
+.mini-kpi span:last-child { font-size: 0.74rem; color: var(--muted); }
+
 /* --- Responsive ---------------------------------------------------------- */
 @media (max-width: 900px) {
   .kpis { grid-template-columns: repeat(2, 1fr); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
   .hero h1 { font-size: 2rem; }
   .nav nav a:not(.btn) { display: none; }
+  .explorer { flex-direction: column; }
+  .explorer-sidebar {
+    flex: 1 1 auto;
+    width: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .kpis-row { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .kpis { grid-template-columns: 1fr; }
