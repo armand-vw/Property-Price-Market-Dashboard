@@ -171,6 +171,137 @@ def build_country_growth(comparison: pd.DataFrame) -> str:
     return fig_to_html(style_fig(fig, 500))
 
 
+def build_market_explorer(history: pd.DataFrame, markets: pd.DataFrame) -> str:
+    """US market trend with a native Plotly dropdown to switch metros."""
+    order = markets.sort_values("size_rank").reset_index(drop=True)
+    fig = go.Figure()
+    for index, row in enumerate(order.itertuples()):
+        series = history[history["market_id"] == row.market_id].sort_values("month")
+        series = series[series["month"] >= series["month"].max() - pd.DateOffset(years=10)]
+        fig.add_trace(
+            go.Scatter(
+                x=series["month"],
+                y=series["value"],
+                mode="lines",
+                name=row.market,
+                visible=(index == 0),
+                showlegend=False,
+                line=dict(
+                    width=2.6,
+                    color=config.CHART_SEQUENCE[index % len(config.CHART_SEQUENCE)],
+                ),
+                hovertemplate="%{x|%b %Y}<br>$%{y:,.0f}<extra>" + row.market + "</extra>",
+            )
+        )
+
+    count = len(order)
+    buttons = [
+        dict(
+            label="All markets",
+            method="update",
+            args=[{"visible": [True] * count}, {"title": {"text": "Median home value — all 15 markets"}}],
+        )
+    ]
+    for index, row in enumerate(order.itertuples()):
+        visible = [False] * count
+        visible[index] = True
+        buttons.append(
+            dict(
+                label=row.market,
+                method="update",
+                args=[{"visible": visible}, {"title": {"text": f"Median home value — {row.market}"}}],
+            )
+        )
+
+    fig = style_fig(fig, 470)
+    fig.update_layout(
+        title="Median home value — all 15 markets",
+        margin=dict(l=20, r=20, t=130, b=20),
+        updatemenus=[
+            dict(
+                buttons=buttons,
+                direction="down",
+                showactive=True,
+                x=0,
+                y=1.16,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="white",
+                bordercolor=config.COLORS["border"],
+            )
+        ],
+    )
+    fig.update_yaxes(tickprefix="$", tickformat=",")
+    return fig_to_html(fig)
+
+
+def build_country_explorer(bis: pd.DataFrame) -> str:
+    """Country index trend with a native Plotly dropdown to switch countries."""
+    fig = go.Figure()
+    for index, code in enumerate(config.COUNTRY_ORDER):
+        group = bis[bis["country_code"] == code].sort_values("period_date").tail(60)
+        fig.add_trace(
+            go.Scatter(
+                x=group["period_date"],
+                y=group["index"],
+                mode="lines",
+                name=config.COUNTRIES[code]["name"],
+                visible=(index == 0),
+                showlegend=False,
+                line=dict(
+                    width=2.6,
+                    color=config.CHART_SEQUENCE[index % len(config.CHART_SEQUENCE)],
+                ),
+                hovertemplate="%{x|%Y}<br>Index %{y:.1f}<extra>"
+                + config.COUNTRIES[code]["name"]
+                + "</extra>",
+            )
+        )
+
+    count = len(config.COUNTRY_ORDER)
+    buttons = [
+        dict(
+            label="All countries",
+            method="update",
+            args=[{"visible": [True] * count}, {"title": {"text": "House price index — all countries"}}],
+        )
+    ]
+    for index, code in enumerate(config.COUNTRY_ORDER):
+        visible = [False] * count
+        visible[index] = True
+        buttons.append(
+            dict(
+                label=config.COUNTRIES[code]["name"],
+                method="update",
+                args=[
+                    {"visible": visible},
+                    {"title": {"text": f"House price index — {config.COUNTRIES[code]['name']}"}},
+                ],
+            )
+        )
+
+    fig = style_fig(fig, 470)
+    fig.update_layout(
+        title="House price index — all countries",
+        showlegend=False,
+        margin=dict(l=20, r=20, t=130, b=20),
+        updatemenus=[
+            dict(
+                buttons=buttons,
+                direction="down",
+                showactive=True,
+                x=0,
+                y=1.16,
+                xanchor="left",
+                yanchor="top",
+                bgcolor="white",
+                bordercolor=config.COLORS["border"],
+            )
+        ],
+    )
+    return fig_to_html(fig)
+
+
 def build_feature_importance(importance: pd.DataFrame) -> str:
     """Horizontal bar chart of aggregated feature importances."""
     frame = importance.sort_values("importance")
@@ -232,7 +363,7 @@ TEMPLATE = r"""<!DOCTYPE html>
       <a class="btn btn-primary" href="#run" target="_self">▶ Run the app</a>
       <a class="btn btn-outline" href="__REPO_URL__" target="_blank" rel="noopener">View source</a>
     </div>
-    <p class="cta-note">This page is a live preview; run the full app locally or with Docker.</p>
+    <p class="cta-note">Select a market or country from the dropdowns below · run the full app locally or with Docker.</p>
   </div>
 </section>
 
@@ -257,7 +388,9 @@ TEMPLATE = r"""<!DOCTYPE html>
 
 <section id="preview" class="section">
   <h2>Interactive preview</h2>
-  <p class="section-lede">Rendered from real Zillow market data and the trained model at build time.</p>
+  <p class="section-lede">Use the dropdowns below to switch between US markets and countries. Charts are rendered from real data at build time; run the full app for live valuation.</p>
+  <div class="chart-card"><h3>Explore a US Market</h3><p class="muted">Pick any of the 15 metros to see its 10-year median home-value trend.</p><div class="chart">__CHART_MARKET_EXPLORER__</div></div>
+  <div class="chart-card"><h3>Explore a Country</h3><p class="muted">Pick any of the six countries to see its national BIS house-price index.</p><div class="chart">__CHART_COUNTRY_EXPLORER__</div></div>
   <div class="chart-card"><h3>Median Home Value by Market</h3><p class="muted">Latest published month across the 15 largest US metros.</p><div class="chart">__CHART_VALUES__</div></div>
   <div class="grid grid-2">
     <div class="chart-card"><h3>10-Year Value Growth</h3><p class="muted">Home values indexed to 100 ten years ago — the biggest metros compared.</p><div class="chart">__CHART_GROWTH__</div></div>
@@ -339,6 +472,8 @@ def render_page(
     summary: pd.DataFrame,
     history: pd.DataFrame,
     comparison: pd.DataFrame,
+    markets: pd.DataFrame,
+    bis: pd.DataFrame,
     metrics: dict,
     importance: pd.DataFrame,
 ) -> str:
@@ -360,6 +495,8 @@ def render_page(
         "__RMSE__": dollars(metrics.get("rmse", 0)),
         "__BASELINE__": f"{metrics.get('improvement_vs_baseline_pct', 0):.1f}% lower MAE",
         "__TOP_DRIVERS__": html.escape(top_drivers),
+        "__CHART_MARKET_EXPLORER__": build_market_explorer(history, markets),
+        "__CHART_COUNTRY_EXPLORER__": build_country_explorer(bis),
         "__CHART_VALUES__": build_market_values(summary),
         "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_YIELD__": build_rental_yield(summary),
@@ -383,10 +520,14 @@ def main() -> None:
     overview = market_data.get_market_data()
     summary = overview["summary"]
     history = overview["history"]
+    markets = market_data.load_markets()
     intl = international_data.get_country_data()
     comparison = intl["comparison"]
+    bis = intl["bis"]
 
-    page = render_page(data, summary, history, comparison, metrics, importance)
+    page = render_page(
+        data, summary, history, comparison, markets, bis, metrics, importance
+    )
     INDEX_PATH.write_text(page, encoding="utf-8")
 
     print("=" * 62)
