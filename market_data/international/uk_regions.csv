@@ -1,0 +1,481 @@
+region,region_slug,month,avg_price_gbp,hpi,yoy_pct
+England,england,2016-08,218261,76.4,7.1
+England,england,2016-09,217952,76.3,6.7
+England,england,2016-10,217098,76.0,6.1
+England,england,2016-11,218146,76.3,5.7
+England,england,2016-12,218965,76.6,5.6
+England,england,2017-01,218655,76.5,5.1
+England,england,2017-02,219696,76.9,5.5
+England,england,2017-03,218812,76.6,4.1
+England,england,2017-04,221891,77.6,5.0
+England,england,2017-05,223502,78.2,4.6
+England,england,2017-06,225265,78.8,4.4
+England,england,2017-07,227919,79.7,4.6
+England,england,2017-08,229074,80.1,5.0
+England,england,2017-09,228519,80.0,4.8
+England,england,2017-10,228484,79.9,5.2
+England,england,2017-11,227618,79.6,4.3
+England,england,2017-12,228837,80.1,4.5
+England,england,2018-01,227594,79.6,4.1
+England,england,2018-02,228471,79.9,4.0
+England,england,2018-03,226996,79.4,3.7
+England,england,2018-04,228855,80.1,3.1
+England,england,2018-05,229845,80.4,2.8
+England,england,2018-06,231277,80.9,2.7
+England,england,2018-07,234127,81.9,2.7
+England,england,2018-08,234731,82.1,2.5
+England,england,2018-09,234380,82.0,2.6
+England,england,2018-10,233916,81.8,2.4
+England,england,2018-11,233144,81.6,2.4
+England,england,2018-12,232616,81.4,1.7
+England,england,2019-01,230974,80.8,1.5
+England,england,2019-02,230772,80.7,1.0
+England,england,2019-03,229408,80.3,1.1
+England,england,2019-04,230994,80.8,0.9
+England,england,2019-05,231245,80.9,0.6
+England,england,2019-06,232112,81.2,0.4
+England,england,2019-07,234587,82.1,0.2
+England,england,2019-08,235298,82.3,0.2
+England,england,2019-09,235691,82.5,0.6
+England,england,2019-10,234940,82.2,0.4
+England,england,2019-11,234020,81.9,0.4
+England,england,2019-12,234237,82.0,0.7
+England,england,2020-01,234049,81.9,1.3
+England,england,2020-02,232955,81.5,0.9
+England,england,2020-03,235204,82.3,2.5
+England,england,2020-04,232657,81.4,0.7
+England,england,2020-05,233673,81.8,1.0
+England,england,2020-06,236731,82.8,2.0
+England,england,2020-07,239080,83.6,1.9
+England,england,2020-08,241511,84.5,2.6
+England,england,2020-09,243733,85.3,3.4
+England,england,2020-10,245090,85.8,4.3
+England,england,2020-11,247749,86.7,5.9
+England,england,2020-12,250168,87.5,6.8
+England,england,2021-01,249890,87.4,6.8
+England,england,2021-02,251309,87.9,7.9
+England,england,2021-03,254407,89.0,8.2
+England,england,2021-04,250703,87.7,7.8
+England,england,2021-05,251203,87.9,7.5
+England,england,2021-06,266129,93.1,12.4
+England,england,2021-07,250545,87.7,4.8
+England,england,2021-08,259193,90.7,7.3
+England,england,2021-09,268041,93.8,10.0
+England,england,2021-10,259748,90.9,6.0
+England,england,2021-11,265662,92.9,7.2
+England,england,2021-12,267793,93.7,7.0
+England,england,2022-01,270231,94.5,8.1
+England,england,2022-02,271265,94.9,7.9
+England,england,2022-03,272225,95.2,7.0
+England,england,2022-04,274812,96.1,9.6
+England,england,2022-05,278084,97.3,10.7
+England,england,2022-06,281116,98.4,5.6
+England,england,2022-07,286526,100.2,14.4
+England,england,2022-08,289294,101.2,11.6
+England,england,2022-09,290185,101.5,8.3
+England,england,2022-10,289993,101.5,11.6
+England,england,2022-11,290003,101.5,9.2
+England,england,2022-12,288198,100.8,7.6
+England,england,2023-01,285817,100.0,5.8
+England,england,2023-02,283907,99.3,4.7
+England,england,2023-03,279592,97.8,2.7
+England,england,2023-04,280054,98.0,1.9
+England,england,2023-05,279846,97.9,0.6
+England,england,2023-06,281585,98.5,0.2
+England,england,2023-07,284246,99.5,-0.8
+England,england,2023-08,285690,100.0,-1.2
+England,england,2023-09,284428,99.5,-2.0
+England,england,2023-10,283147,99.1,-2.4
+England,england,2023-11,281026,98.3,-3.1
+England,england,2023-12,278664,97.5,-3.3
+England,england,2024-01,278060,97.3,-2.7
+England,england,2024-02,276935,96.9,-2.5
+England,england,2024-03,276971,96.9,-0.9
+England,england,2024-04,277945,97.2,-0.8
+England,england,2024-05,280824,98.3,0.3
+England,england,2024-06,281611,98.5,0.0
+England,england,2024-07,284105,99.4,0.0
+England,england,2024-08,287343,100.5,0.6
+England,england,2024-09,287576,100.6,1.1
+England,england,2024-10,287595,100.6,1.6
+England,england,2024-11,286814,100.3,2.1
+England,england,2024-12,287035,100.4,3.0
+England,england,2025-01,287264,100.5,3.3
+England,england,2025-02,287794,100.7,3.9
+England,england,2025-03,291748,102.1,5.3
+England,england,2025-04,280500,98.1,0.9
+England,england,2025-05,285526,99.9,1.7
+England,england,2025-06,288115,100.8,2.3
+England,england,2025-07,290212,101.5,2.1
+England,england,2025-08,292512,102.3,1.8
+England,england,2025-09,290866,101.8,1.1
+England,england,2025-10,291159,101.9,1.2
+England,england,2025-11,292537,102.4,2.0
+England,england,2025-12,289918,101.4,1.0
+England,england,2026-01,290511,101.6,1.1
+England,england,2026-02,291643,102.0,1.3
+England,england,2026-03,290496,101.6,-0.4
+England,england,2026-04,292181,102.2,4.2
+England,england,2026-05,292724,102.4,2.5
+England,england,2026-06,291581,102.0,1.2
+England,england,2026-07,293479,102.7,1.1
+Northern Ireland,northern-ireland,2016-08,118039,72.6,6.0
+Northern Ireland,northern-ireland,2016-09,118039,72.6,6.0
+Northern Ireland,northern-ireland,2016-10,118350,72.8,5.3
+Northern Ireland,northern-ireland,2016-11,118350,72.8,5.3
+Northern Ireland,northern-ireland,2016-12,118350,72.8,5.3
+Northern Ireland,northern-ireland,2017-01,118092,72.7,5.0
+Northern Ireland,northern-ireland,2017-02,118092,72.7,5.0
+Northern Ireland,northern-ireland,2017-03,118092,72.7,5.0
+Northern Ireland,northern-ireland,2017-04,120356,74.1,3.2
+Northern Ireland,northern-ireland,2017-05,120356,74.1,3.2
+Northern Ireland,northern-ireland,2017-06,120356,74.1,3.2
+Northern Ireland,northern-ireland,2017-07,121964,75.1,3.3
+Northern Ireland,northern-ireland,2017-08,121964,75.1,3.3
+Northern Ireland,northern-ireland,2017-09,121964,75.1,3.3
+Northern Ireland,northern-ireland,2017-10,122649,75.5,3.6
+Northern Ireland,northern-ireland,2017-11,122649,75.5,3.6
+Northern Ireland,northern-ireland,2017-12,122649,75.5,3.6
+Northern Ireland,northern-ireland,2018-01,123302,75.9,4.4
+Northern Ireland,northern-ireland,2018-02,123302,75.9,4.4
+Northern Ireland,northern-ireland,2018-03,123302,75.9,4.4
+Northern Ireland,northern-ireland,2018-04,125009,76.9,3.9
+Northern Ireland,northern-ireland,2018-05,125009,76.9,3.9
+Northern Ireland,northern-ireland,2018-06,125009,76.9,3.9
+Northern Ireland,northern-ireland,2018-07,127398,78.4,4.5
+Northern Ireland,northern-ireland,2018-08,127398,78.4,4.5
+Northern Ireland,northern-ireland,2018-09,127398,78.4,4.5
+Northern Ireland,northern-ireland,2018-10,129427,79.7,5.5
+Northern Ireland,northern-ireland,2018-11,129427,79.7,5.5
+Northern Ireland,northern-ireland,2018-12,129427,79.7,5.5
+Northern Ireland,northern-ireland,2019-01,128168,78.9,3.9
+Northern Ireland,northern-ireland,2019-02,128168,78.9,3.9
+Northern Ireland,northern-ireland,2019-03,128168,78.9,3.9
+Northern Ireland,northern-ireland,2019-04,129613,79.8,3.7
+Northern Ireland,northern-ireland,2019-05,129613,79.8,3.7
+Northern Ireland,northern-ireland,2019-06,129613,79.8,3.7
+Northern Ireland,northern-ireland,2019-07,132336,81.4,3.9
+Northern Ireland,northern-ireland,2019-08,132336,81.4,3.9
+Northern Ireland,northern-ireland,2019-09,132336,81.4,3.9
+Northern Ireland,northern-ireland,2019-10,132623,81.6,2.5
+Northern Ireland,northern-ireland,2019-11,132623,81.6,2.5
+Northern Ireland,northern-ireland,2019-12,132623,81.6,2.5
+Northern Ireland,northern-ireland,2020-01,133173,82.0,3.9
+Northern Ireland,northern-ireland,2020-02,133173,82.0,3.9
+Northern Ireland,northern-ireland,2020-03,133173,82.0,3.9
+Northern Ireland,northern-ireland,2020-04,133286,82.0,2.8
+Northern Ireland,northern-ireland,2020-05,133286,82.0,2.8
+Northern Ireland,northern-ireland,2020-06,133286,82.0,2.8
+Northern Ireland,northern-ireland,2020-07,136013,83.7,2.8
+Northern Ireland,northern-ireland,2020-08,136013,83.7,2.8
+Northern Ireland,northern-ireland,2020-09,136013,83.7,2.8
+Northern Ireland,northern-ireland,2020-10,139563,85.9,5.2
+Northern Ireland,northern-ireland,2020-11,139563,85.9,5.2
+Northern Ireland,northern-ireland,2020-12,139563,85.9,5.2
+Northern Ireland,northern-ireland,2021-01,141087,86.8,5.9
+Northern Ireland,northern-ireland,2021-02,141087,86.8,5.9
+Northern Ireland,northern-ireland,2021-03,141087,86.8,5.9
+Northern Ireland,northern-ireland,2021-04,146044,89.9,9.6
+Northern Ireland,northern-ireland,2021-05,146044,89.9,9.6
+Northern Ireland,northern-ireland,2021-06,146044,89.9,9.6
+Northern Ireland,northern-ireland,2021-07,150563,92.7,10.7
+Northern Ireland,northern-ireland,2021-08,150563,92.7,10.7
+Northern Ireland,northern-ireland,2021-09,150563,92.7,10.7
+Northern Ireland,northern-ireland,2021-10,150539,92.7,7.9
+Northern Ireland,northern-ireland,2021-11,150539,92.7,7.9
+Northern Ireland,northern-ireland,2021-12,150539,92.7,7.9
+Northern Ireland,northern-ireland,2022-01,155086,95.4,9.9
+Northern Ireland,northern-ireland,2022-02,155086,95.4,9.9
+Northern Ireland,northern-ireland,2022-03,155086,95.4,9.9
+Northern Ireland,northern-ireland,2022-04,160214,98.6,9.7
+Northern Ireland,northern-ireland,2022-05,160214,98.6,9.7
+Northern Ireland,northern-ireland,2022-06,160214,98.6,9.7
+Northern Ireland,northern-ireland,2022-07,166363,102.4,10.5
+Northern Ireland,northern-ireland,2022-08,166363,102.4,10.5
+Northern Ireland,northern-ireland,2022-09,166363,102.4,10.5
+Northern Ireland,northern-ireland,2022-10,165729,102.0,10.1
+Northern Ireland,northern-ireland,2022-11,165729,102.0,10.1
+Northern Ireland,northern-ireland,2022-12,165729,102.0,10.1
+Northern Ireland,northern-ireland,2023-01,162479,100.0,4.8
+Northern Ireland,northern-ireland,2023-02,162479,100.0,4.8
+Northern Ireland,northern-ireland,2023-03,162479,100.0,4.8
+Northern Ireland,northern-ireland,2023-04,164587,101.3,2.7
+Northern Ireland,northern-ireland,2023-05,164587,101.3,2.7
+Northern Ireland,northern-ireland,2023-06,164587,101.3,2.7
+Northern Ireland,northern-ireland,2023-07,169726,104.5,2.0
+Northern Ireland,northern-ireland,2023-08,169726,104.5,2.0
+Northern Ireland,northern-ireland,2023-09,169726,104.5,2.0
+Northern Ireland,northern-ireland,2023-10,168157,103.5,1.5
+Northern Ireland,northern-ireland,2023-11,168157,103.5,1.5
+Northern Ireland,northern-ireland,2023-12,168157,103.5,1.5
+Northern Ireland,northern-ireland,2024-01,169060,104.1,4.1
+Northern Ireland,northern-ireland,2024-02,169060,104.1,4.1
+Northern Ireland,northern-ireland,2024-03,169060,104.1,4.1
+Northern Ireland,northern-ireland,2024-04,175418,108.0,6.6
+Northern Ireland,northern-ireland,2024-05,175418,108.0,6.6
+Northern Ireland,northern-ireland,2024-06,175418,108.0,6.6
+Northern Ireland,northern-ireland,2024-07,180467,111.1,6.3
+Northern Ireland,northern-ireland,2024-08,180467,111.1,6.3
+Northern Ireland,northern-ireland,2024-09,180467,111.1,6.3
+Northern Ireland,northern-ireland,2024-10,182320,112.2,8.4
+Northern Ireland,northern-ireland,2024-11,182320,112.2,8.4
+Northern Ireland,northern-ireland,2024-12,182320,112.2,8.4
+Northern Ireland,northern-ireland,2025-01,184322,113.4,9.0
+Northern Ireland,northern-ireland,2025-02,184322,113.4,9.0
+Northern Ireland,northern-ireland,2025-03,184322,113.4,9.0
+Northern Ireland,northern-ireland,2025-04,185455,114.1,5.7
+Northern Ireland,northern-ireland,2025-05,185455,114.1,5.7
+Northern Ireland,northern-ireland,2025-06,185455,114.1,5.7
+Northern Ireland,northern-ireland,2025-07,193080,118.8,7.0
+Northern Ireland,northern-ireland,2025-08,193080,118.8,7.0
+Northern Ireland,northern-ireland,2025-09,193080,118.8,7.0
+Northern Ireland,northern-ireland,2025-10,195262,120.2,7.1
+Northern Ireland,northern-ireland,2025-11,195262,120.2,7.1
+Northern Ireland,northern-ireland,2025-12,195262,120.2,7.1
+Northern Ireland,northern-ireland,2026-01,198261,122.0,7.6
+Northern Ireland,northern-ireland,2026-02,198261,122.0,7.6
+Northern Ireland,northern-ireland,2026-03,198261,122.0,7.6
+Northern Ireland,northern-ireland,2026-04,202487,124.6,9.2
+Northern Ireland,northern-ireland,2026-05,202487,124.6,9.2
+Northern Ireland,northern-ireland,2026-06,202487,124.6,9.2
+Northern Ireland,northern-ireland,2026-07,202487,124.6,9.2
+Scotland,scotland,2016-08,135571,77.4,1.7
+Scotland,scotland,2016-09,135236,77.2,1.7
+Scotland,scotland,2016-10,134368,76.7,1.4
+Scotland,scotland,2016-11,135543,77.4,1.7
+Scotland,scotland,2016-12,132996,76.0,1.1
+Scotland,scotland,2017-01,133141,76.0,1.1
+Scotland,scotland,2017-02,130885,74.8,1.0
+Scotland,scotland,2017-03,131731,75.2,0.5
+Scotland,scotland,2017-04,135773,77.5,3.4
+Scotland,scotland,2017-05,136715,78.1,2.8
+Scotland,scotland,2017-06,138220,78.9,2.4
+Scotland,scotland,2017-07,142004,81.1,3.7
+Scotland,scotland,2017-08,141685,80.9,4.5
+Scotland,scotland,2017-09,139082,79.4,2.8
+Scotland,scotland,2017-10,139591,79.7,3.9
+Scotland,scotland,2017-11,140834,80.4,3.9
+Scotland,scotland,2017-12,139761,79.8,5.1
+Scotland,scotland,2018-01,141353,80.7,6.2
+Scotland,scotland,2018-02,140480,80.2,7.3
+Scotland,scotland,2018-03,139202,79.5,5.7
+Scotland,scotland,2018-04,142832,81.6,5.2
+Scotland,scotland,2018-05,143019,81.7,4.6
+Scotland,scotland,2018-06,144308,82.4,4.4
+Scotland,scotland,2018-07,146056,83.4,2.9
+Scotland,scotland,2018-08,146404,83.6,3.3
+Scotland,scotland,2018-09,145738,83.2,4.8
+Scotland,scotland,2018-10,145816,83.3,4.5
+Scotland,scotland,2018-11,143919,82.2,2.2
+Scotland,scotland,2018-12,142681,81.5,2.1
+Scotland,scotland,2019-01,144124,82.3,2.0
+Scotland,scotland,2019-02,141355,80.7,0.6
+Scotland,scotland,2019-03,143985,82.2,3.4
+Scotland,scotland,2019-04,145110,82.9,1.6
+Scotland,scotland,2019-05,145709,83.2,1.9
+Scotland,scotland,2019-06,146925,83.9,1.8
+Scotland,scotland,2019-07,148942,85.1,2.0
+Scotland,scotland,2019-08,148383,84.7,1.4
+Scotland,scotland,2019-09,149037,85.1,2.3
+Scotland,scotland,2019-10,148150,84.6,1.6
+Scotland,scotland,2019-11,146779,83.8,2.0
+Scotland,scotland,2019-12,144623,82.6,1.4
+Scotland,scotland,2020-01,147731,84.4,2.5
+Scotland,scotland,2020-02,143944,82.2,1.8
+Scotland,scotland,2020-03,144948,82.8,0.7
+Scotland,scotland,2020-04,146059,83.4,0.7
+Scotland,scotland,2020-05,147150,84.0,1.0
+Scotland,scotland,2020-06,149474,85.4,1.7
+Scotland,scotland,2020-07,148755,85.0,-0.1
+Scotland,scotland,2020-08,148875,85.0,0.3
+Scotland,scotland,2020-09,154532,88.3,3.7
+Scotland,scotland,2020-10,156874,89.6,5.9
+Scotland,scotland,2020-11,157849,90.2,7.5
+Scotland,scotland,2020-12,156254,89.2,8.0
+Scotland,scotland,2021-01,157866,90.2,6.9
+Scotland,scotland,2021-02,155612,88.9,8.1
+Scotland,scotland,2021-03,160963,91.9,11.0
+Scotland,scotland,2021-04,154719,88.4,5.9
+Scotland,scotland,2021-05,161935,92.5,10.0
+Scotland,scotland,2021-06,165261,94.4,10.6
+Scotland,scotland,2021-07,168799,96.4,13.5
+Scotland,scotland,2021-08,170669,97.5,14.6
+Scotland,scotland,2021-09,170829,97.6,10.5
+Scotland,scotland,2021-10,170955,97.6,9.0
+Scotland,scotland,2021-11,172873,98.7,9.5
+Scotland,scotland,2021-12,169213,96.6,8.3
+Scotland,scotland,2022-01,173589,99.1,10.0
+Scotland,scotland,2022-02,170905,97.6,9.8
+Scotland,scotland,2022-03,171510,98.0,6.6
+Scotland,scotland,2022-04,175109,100.0,13.2
+Scotland,scotland,2022-05,177326,101.3,9.5
+Scotland,scotland,2022-06,181120,103.4,9.6
+Scotland,scotland,2022-07,182979,104.5,8.4
+Scotland,scotland,2022-08,183378,104.7,7.4
+Scotland,scotland,2022-09,181639,103.7,6.3
+Scotland,scotland,2022-10,182341,104.1,6.7
+Scotland,scotland,2022-11,180523,103.1,4.4
+Scotland,scotland,2022-12,175560,100.3,3.8
+Scotland,scotland,2023-01,175092,100.0,0.9
+Scotland,scotland,2023-02,171282,97.8,0.2
+Scotland,scotland,2023-03,173352,99.0,1.1
+Scotland,scotland,2023-04,175512,100.2,0.2
+Scotland,scotland,2023-05,179854,102.7,1.4
+Scotland,scotland,2023-06,177705,101.5,-1.9
+Scotland,scotland,2023-07,181013,103.4,-1.1
+Scotland,scotland,2023-08,182593,104.3,-0.4
+Scotland,scotland,2023-09,180364,103.0,-0.7
+Scotland,scotland,2023-10,180051,102.8,-1.3
+Scotland,scotland,2023-11,179184,102.3,-0.7
+Scotland,scotland,2023-12,176538,100.8,0.6
+Scotland,scotland,2024-01,179248,102.4,2.4
+Scotland,scotland,2024-02,175883,100.5,2.7
+Scotland,scotland,2024-03,177778,101.5,2.6
+Scotland,scotland,2024-04,180647,103.2,2.9
+Scotland,scotland,2024-05,180418,103.0,0.3
+Scotland,scotland,2024-06,181219,103.5,2.0
+Scotland,scotland,2024-07,185882,106.2,2.7
+Scotland,scotland,2024-08,186285,106.4,2.0
+Scotland,scotland,2024-09,184496,105.4,2.3
+Scotland,scotland,2024-10,185664,106.0,3.1
+Scotland,scotland,2024-11,184775,105.5,3.1
+Scotland,scotland,2024-12,181800,103.8,3.0
+Scotland,scotland,2025-01,185315,105.8,3.4
+Scotland,scotland,2025-02,182421,104.2,3.7
+Scotland,scotland,2025-03,183642,104.9,3.3
+Scotland,scotland,2025-04,186736,106.7,3.4
+Scotland,scotland,2025-05,187312,107.0,3.8
+Scotland,scotland,2025-06,190959,109.1,5.4
+Scotland,scotland,2025-07,191951,109.6,3.3
+Scotland,scotland,2025-08,192766,110.1,3.5
+Scotland,scotland,2025-09,193502,110.5,4.9
+Scotland,scotland,2025-10,193160,110.3,4.0
+Scotland,scotland,2025-11,193184,110.3,4.6
+Scotland,scotland,2025-12,189403,108.2,4.2
+Scotland,scotland,2026-01,189118,108.0,2.1
+Scotland,scotland,2026-02,188801,107.8,3.5
+Scotland,scotland,2026-03,188330,107.6,2.6
+Scotland,scotland,2026-04,192638,110.0,3.2
+Scotland,scotland,2026-05,196320,112.1,4.8
+Scotland,scotland,2026-06,193986,110.8,1.6
+Scotland,scotland,2026-07,196349,112.1,2.3
+Wales,wales,2016-08,137657,68.2,3.4
+Wales,wales,2016-09,137271,68.0,3.4
+Wales,wales,2016-10,138864,68.8,4.1
+Wales,wales,2016-11,138504,68.6,3.8
+Wales,wales,2016-12,138659,68.7,3.5
+Wales,wales,2017-01,138614,68.7,4.6
+Wales,wales,2017-02,138086,68.4,2.2
+Wales,wales,2017-03,139940,69.3,4.4
+Wales,wales,2017-04,141933,70.3,5.6
+Wales,wales,2017-05,139592,69.2,2.2
+Wales,wales,2017-06,142401,70.5,2.7
+Wales,wales,2017-07,143002,70.8,3.2
+Wales,wales,2017-08,144735,71.7,5.1
+Wales,wales,2017-09,145083,71.9,5.7
+Wales,wales,2017-10,146794,72.7,5.7
+Wales,wales,2017-11,144972,71.8,4.7
+Wales,wales,2017-12,145617,72.1,5.0
+Wales,wales,2018-01,144990,71.8,4.6
+Wales,wales,2018-02,145068,71.9,5.1
+Wales,wales,2018-03,145837,72.2,4.2
+Wales,wales,2018-04,145412,72.0,2.5
+Wales,wales,2018-05,146531,72.6,5.0
+Wales,wales,2018-06,148527,73.6,4.3
+Wales,wales,2018-07,150195,74.4,5.0
+Wales,wales,2018-08,152466,75.5,5.3
+Wales,wales,2018-09,151747,75.2,4.6
+Wales,wales,2018-10,152401,75.5,3.8
+Wales,wales,2018-11,151646,75.1,4.6
+Wales,wales,2018-12,153612,76.1,5.5
+Wales,wales,2019-01,150122,74.4,3.5
+Wales,wales,2019-02,150566,74.6,3.8
+Wales,wales,2019-03,151406,75.0,3.8
+Wales,wales,2019-04,152875,75.7,5.1
+Wales,wales,2019-05,153038,75.8,4.4
+Wales,wales,2019-06,154250,76.4,3.9
+Wales,wales,2019-07,155700,77.1,3.7
+Wales,wales,2019-08,159275,78.9,4.5
+Wales,wales,2019-09,155676,77.1,2.6
+Wales,wales,2019-10,157444,78.0,3.3
+Wales,wales,2019-11,159560,79.0,5.2
+Wales,wales,2019-12,157588,78.1,2.6
+Wales,wales,2020-01,154532,76.6,2.9
+Wales,wales,2020-02,157134,77.8,4.4
+Wales,wales,2020-03,158163,78.4,4.5
+Wales,wales,2020-04,151534,75.1,-0.9
+Wales,wales,2020-05,154054,76.3,0.7
+Wales,wales,2020-06,158488,78.5,2.7
+Wales,wales,2020-07,159465,79.0,2.4
+Wales,wales,2020-08,163805,81.2,2.8
+Wales,wales,2020-09,160994,79.8,3.4
+Wales,wales,2020-10,166597,82.5,5.8
+Wales,wales,2020-11,168781,83.6,5.8
+Wales,wales,2020-12,171640,85.0,8.9
+Wales,wales,2021-01,169842,84.1,9.9
+Wales,wales,2021-02,168438,83.4,7.2
+Wales,wales,2021-03,173661,86.0,9.8
+Wales,wales,2021-04,171658,85.0,13.3
+Wales,wales,2021-05,174016,86.2,13.0
+Wales,wales,2021-06,184345,91.3,16.3
+Wales,wales,2021-07,176129,87.3,10.5
+Wales,wales,2021-08,180281,89.3,10.1
+Wales,wales,2021-09,185561,91.9,15.3
+Wales,wales,2021-10,186951,92.6,12.2
+Wales,wales,2021-11,186520,92.4,10.5
+Wales,wales,2021-12,189741,94.0,10.5
+Wales,wales,2022-01,191552,94.9,12.8
+Wales,wales,2022-02,189656,94.0,12.6
+Wales,wales,2022-03,191471,94.9,10.3
+Wales,wales,2022-04,195875,97.0,14.1
+Wales,wales,2022-05,196682,97.4,13.0
+Wales,wales,2022-06,200277,99.2,8.6
+Wales,wales,2022-07,203313,100.7,15.4
+Wales,wales,2022-08,204218,101.2,13.3
+Wales,wales,2022-09,207696,102.9,11.9
+Wales,wales,2022-10,208209,103.1,11.4
+Wales,wales,2022-11,205941,102.0,10.4
+Wales,wales,2022-12,206563,102.3,8.9
+Wales,wales,2023-01,201853,100.0,5.4
+Wales,wales,2023-02,200870,99.5,5.9
+Wales,wales,2023-03,199167,98.7,4.0
+Wales,wales,2023-04,195717,97.0,-0.1
+Wales,wales,2023-05,199616,98.9,1.5
+Wales,wales,2023-06,200183,99.2,0.0
+Wales,wales,2023-07,202620,100.4,-0.3
+Wales,wales,2023-08,203852,101.0,-0.2
+Wales,wales,2023-09,204460,101.3,-1.6
+Wales,wales,2023-10,202477,100.3,-2.8
+Wales,wales,2023-11,201778,100.0,-2.0
+Wales,wales,2023-12,202077,100.1,-2.2
+Wales,wales,2024-01,197808,98.0,-2.0
+Wales,wales,2024-02,199272,98.7,-0.8
+Wales,wales,2024-03,200795,99.5,0.8
+Wales,wales,2024-04,199545,98.9,2.0
+Wales,wales,2024-05,199330,98.7,-0.1
+Wales,wales,2024-06,204368,101.2,2.1
+Wales,wales,2024-07,204982,101.6,1.2
+Wales,wales,2024-08,207156,102.6,1.6
+Wales,wales,2024-09,203822,101.0,-0.3
+Wales,wales,2024-10,207454,102.8,2.5
+Wales,wales,2024-11,207435,102.8,2.8
+Wales,wales,2024-12,204641,101.4,1.3
+Wales,wales,2025-01,206010,102.1,4.1
+Wales,wales,2025-02,205266,101.7,3.0
+Wales,wales,2025-03,207151,102.6,3.2
+Wales,wales,2025-04,205275,101.7,2.9
+Wales,wales,2025-05,206642,102.4,3.7
+Wales,wales,2025-06,209486,103.8,2.5
+Wales,wales,2025-07,209546,103.8,2.2
+Wales,wales,2025-08,209837,104.0,1.3
+Wales,wales,2025-09,210986,104.5,3.5
+Wales,wales,2025-10,211395,104.7,1.9
+Wales,wales,2025-11,210630,104.3,1.5
+Wales,wales,2025-12,213580,105.8,4.4
+Wales,wales,2026-01,211046,104.6,2.4
+Wales,wales,2026-02,212449,105.2,3.5
+Wales,wales,2026-03,213814,105.9,3.2
+Wales,wales,2026-04,212259,105.2,3.4
+Wales,wales,2026-05,215261,106.6,4.2
+Wales,wales,2026-06,212837,105.4,1.6
+Wales,wales,2026-07,215037,106.5,2.6

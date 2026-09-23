@@ -28,6 +28,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import config  # noqa: E402
+import international_data  # noqa: E402
 import market_data  # noqa: E402
 from data_loader import load_or_create_data  # noqa: E402
 from model import ensure_model  # noqa: E402
@@ -156,6 +157,20 @@ def build_rental_yield(summary: pd.DataFrame) -> str:
     return fig_to_html(style_fig(fig, 520))
 
 
+def build_country_growth(comparison: pd.DataFrame) -> str:
+    """Cross-country home-price growth, indexed to a common base."""
+    fig = px.line(
+        comparison,
+        x="period_date",
+        y="indexed",
+        color="country",
+        color_discrete_sequence=config.CHART_SEQUENCE,
+        labels={"period_date": "", "indexed": "Index (window start = 100)", "country": ""},
+    )
+    fig.update_traces(line=dict(width=2.4))
+    return fig_to_html(style_fig(fig, 500))
+
+
 def build_feature_importance(importance: pd.DataFrame) -> str:
     """Horizontal bar chart of aggregated feature importances."""
     frame = importance.sort_values("importance")
@@ -209,8 +224,9 @@ TEMPLATE = r"""<!DOCTYPE html>
     <h1>Real Estate Price Estimator &amp;<br />Market Insights Dashboard</h1>
     <p class="lede">
       An end-to-end, production-style application combining <strong>live US market data</strong>
-      from Zillow Research with a gradient-boosted valuation model. Select a market, explore
-      real neighbourhood values and trends, and estimate property prices.
+      from Zillow Research and <strong>international data</strong> from the Bank for
+      International Settlements. Explore six countries, real neighbourhood values and trends,
+      and estimate US property prices.
     </p>
     <div class="cta-row">
       <a class="btn btn-primary" href="#run" target="_self">▶ Run the app</a>
@@ -247,7 +263,8 @@ TEMPLATE = r"""<!DOCTYPE html>
     <div class="chart-card"><h3>10-Year Value Growth</h3><p class="muted">Home values indexed to 100 ten years ago — the biggest metros compared.</p><div class="chart">__CHART_GROWTH__</div></div>
     <div class="chart-card"><h3>Gross Rental Yield by Market</h3><p class="muted">Annual median rent (ZORI) as a percentage of median home value (ZHVI).</p><div class="chart">__CHART_YIELD__</div></div>
   </div>
-  <div class="chart-card"><h3>What Drives Home Prices</h3><p class="muted">Aggregated XGBoost gain importance.</p><div class="chart">__CHART_IMPORTANCE__</div></div>
+  <div class="chart-card"><h3>International Home Price Growth</h3><p class="muted">BIS nominal house price index for six countries, indexed to 100 at the window start.</p><div class="chart">__CHART_COUNTRIES__</div></div>
+  <div class="chart-card"><h3>What Drives Home Prices</h3><p class="muted">Aggregated XGBoost gain importance (US model).</p><div class="chart">__CHART_IMPORTANCE__</div></div>
 </section>
 
 <section id="model" class="section">
@@ -280,6 +297,8 @@ TEMPLATE = r"""<!DOCTYPE html>
     <span class="pill">Plotly</span>
     <span class="pill">pandas</span>
     <span class="pill">Zillow Research</span>
+    <span class="pill">BIS</span>
+    <span class="pill">HM Land Registry</span>
     <span class="pill">pytest</span>
     <span class="pill">Docker</span>
     <span class="pill">GitHub Actions</span>
@@ -319,6 +338,7 @@ def render_page(
     df: pd.DataFrame,
     summary: pd.DataFrame,
     history: pd.DataFrame,
+    comparison: pd.DataFrame,
     metrics: dict,
     importance: pd.DataFrame,
 ) -> str:
@@ -343,6 +363,7 @@ def render_page(
         "__CHART_VALUES__": build_market_values(summary),
         "__CHART_GROWTH__": build_market_growth(history, summary),
         "__CHART_YIELD__": build_rental_yield(summary),
+        "__CHART_COUNTRIES__": build_country_growth(comparison),
         "__CHART_IMPORTANCE__": build_feature_importance(importance),
         "__GENERATED_AT__": datetime.now(UTC).strftime("%b %Y"),
     }
@@ -362,8 +383,10 @@ def main() -> None:
     overview = market_data.get_market_data()
     summary = overview["summary"]
     history = overview["history"]
+    intl = international_data.get_country_data()
+    comparison = intl["comparison"]
 
-    page = render_page(data, summary, history, metrics, importance)
+    page = render_page(data, summary, history, comparison, metrics, importance)
     INDEX_PATH.write_text(page, encoding="utf-8")
 
     print("=" * 62)
@@ -371,6 +394,7 @@ def main() -> None:
     print("=" * 62)
     print(f"Output        : {INDEX_PATH}")
     print(f"Markets       : {summary.shape[0]}")
+    print(f"Countries     : {len(intl['summary'])} (source: {intl['source']})")
     print(f"Listings      : {len(data):,}")
     print(f"R2 / MAPE     : {metrics.get('r2', 0):.3f} / {metrics.get('mape', 0):.2f}%")
 

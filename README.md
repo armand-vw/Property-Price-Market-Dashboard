@@ -16,11 +16,13 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 </p>
 
 
-> **Data:** market values, rents and trends are **real monthly data from
+> **Data:** US market values, rents and trends are **real monthly data from
 > [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI home values,
-> ZORI rents), fetched live from the public CDN with a committed snapshot
-> fallback. Listing-level features are synthesised and calibrated to each
-> neighbourhood's real median value.
+> ZORI rents). International data comes from the **Bank for International
+> Settlements** (BIS residential property prices) and **HM Land Registry**
+> (UK House Price Index), each fetched live where possible with a committed
+> snapshot fallback. Listing-level features are synthesised and calibrated to
+> each neighbourhood's real median value.
 
 ---
 
@@ -56,6 +58,10 @@ market snapshot and fitted model are committed, so it even runs fully offline
 
 ## ✨ Highlights
 
+- **Six countries** — switch between the **United States, United Kingdom,
+  Canada, Australia, China and South Africa**. Non-US countries show real
+  national BIS house-price indices and a cross-country comparison; the UK adds
+  regional average prices from HM Land Registry.
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
   Dallas, Houston, Washington DC, Philadelphia, Miami, Atlanta, Boston, Phoenix,
   San Francisco, Riverside, Detroit, Seattle) — real monthly median home values
@@ -88,19 +94,24 @@ market snapshot and fitted model are committed, so it even runs fully offline
 Property-Price-Market-Dashboard/
 ├── app.py                       # Streamlit dashboard (entry point)
 ├── market_data.py               # Zillow fetch, cache, fallback, aggregates
+├── international_data.py        # BIS + UK Land Registry fetch/aggregates
 ├── data_loader.py               # Market-anchored synthesis + cleaning
 ├── model.py                     # Pipeline, training, metrics, persistence
 ├── config.py                    # Paths, schema, seeds, palette, constants
 ├── market_data/                 # Committed real-market snapshot (small)
-│   ├── markets.csv              # 15 metros
+│   ├── markets.csv              # 15 US metros
 │   ├── market_history.csv       # monthly metro home values
 │   ├── market_rents.csv         # monthly metro rents (ZORI)
 │   ├── neighborhood_meta.csv    # neighbourhood values + price anchors
-│   └── neighborhood_history.csv # monthly neighbourhood home values
+│   ├── neighborhood_history.csv # monthly neighbourhood home values
+│   └── international/
+│       ├── bis_index.csv        # BIS national indices (six countries)
+│       └── uk_regions.csv       # UK nation prices (HM Land Registry)
 ├── scripts/
-│   ├── build_market_snapshot.py # Builds market_data/ from Zillow (~100 MB once)
-│   ├── build_site.py            # Renders the GitHub Pages site into docs/
-│   └── build_images.py          # Generates the README charts into assets/
+│   ├── build_market_snapshot.py        # Builds market_data/ from Zillow (~100 MB once)
+│   ├── build_international_snapshot.py # Builds BIS + UK snapshots
+│   ├── build_site.py                   # Renders the GitHub Pages site into docs/
+│   └── build_images.py                 # Generates the README charts into assets/
 ├── docs/                        # GitHub Pages landing page (static)
 ├── assets/                      # README chart images
 ├── tests/                       # pytest suite (offline)
@@ -166,8 +177,10 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights
 ```bash
 python data_loader.py --force            # rebuild data/housing.csv
 python model.py                          # retrain + print evaluation summary
-python market_data.py                    # print the live market overview
-python scripts/build_market_snapshot.py  # refresh market_data/ from Zillow
+python market_data.py                    # print the live US market overview
+python international_data.py             # print the international overview
+python scripts/build_market_snapshot.py  # refresh US market_data/ from Zillow
+python scripts/build_international_snapshot.py  # refresh BIS + UK snapshots
 python scripts/build_site.py             # regenerate the GitHub Pages site
 ```
 
@@ -192,7 +205,22 @@ series — the median rent and **gross rental yield** (annual rent ÷ home value
 A **Refresh** button re-fetches live data on demand, and a scheduled GitHub
 Actions workflow rebuilds the committed snapshot monthly.
 
-### 2. Market-anchored synthesis (`data_loader.py`)
+### 2. International data (`international_data.py`)
+
+The country switcher adds six markets:
+
+- **BIS** *Selected Residential Property Prices* — nominal house-price index
+  (`2010 = 100`) and year-on-year change, quarterly, national, for the **US, UK,
+  Canada, Australia, China and South Africa**. A small (~135 KB) bulk file
+  fetched live with a 24-hour cache and snapshot fallback.
+- **HM Land Registry** *UK House Price Index* — monthly average price (GBP), HPI
+  and annual change for the four UK nations, served from a committed snapshot.
+
+Non-US countries show national, index-based insights and a cross-country
+comparison. Only the US exposes listing-level valuation (the model is anchored
+to real US medians); the app states this explicitly.
+
+### 3. Market-anchored synthesis (`data_loader.py`)
 
 Listing-level features are generated per neighbourhood and priced as:
 
@@ -210,7 +238,7 @@ so cleaning is exercised, then:
 3. IQR winsorisation of `price` and `sqft`,
 4. derived `price_per_sqft` and `property_age`.
 
-### 3. Model pipeline (`model.py`)
+### 4. Model pipeline (`model.py`)
 
 ```
 Raw features
@@ -225,7 +253,7 @@ The full object is persisted with `joblib`, so a single artifact accepts raw
 features and returns prices in dollars. If XGBoost is unavailable the pipeline
 falls back to `RandomForestRegressor`.
 
-### 4. Evaluation (`model.py`)
+### 5. Evaluation (`model.py`)
 
 80/20 train/test split, scored in dollars: MAE, RMSE, MAPE, median APE, R², and
 a baseline comparison against always predicting the median.
@@ -256,11 +284,16 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 
 ## 🖥️ Dashboard Tour
 
+- **🗺️ Country switcher** — choose the **United States, United Kingdom, Canada,
+  Australia, China or South Africa**; the whole dashboard adapts.
 - **Executive KPI row** — listings, the selected market's **real** median value
   and YoY, model accuracy (100 − MAPE) and R².
-- **🌎 Markets** — live median value, MoM/YoY/5-year changes, rent and gross
+- **🌎 Markets** (US) — live median value, MoM/YoY/5-year changes, rent and gross
   rental yield, a 10-year value trend, latest-value / YoY / yield comparison
   across all 15 markets, and a real neighbourhood value table.
+- **🌍 International** (non-US) — national BIS house-price index, YoY and 5-year
+  change, index/YoY trends, a **cross-country** growth comparison, and (for the
+  UK) a nation-level price table from HM Land Registry.
 - **📊 Market Analytics** — price-per-sqft scatter by location (colour-coded by
   age band), median listing price by location, and feature importances.
 - **🤖 Model Insights** — metric cards, predicted-vs-actual parity and residual
@@ -270,9 +303,9 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 - **🎯 Live Valuation Tool (sidebar)** — pick a market and location, set the
   property details (including lot size) and press **Estimate Value** to get the
   estimate, an empirical valuation range, and a comparison against the **real**
-  neighbourhood median.
-- **🔗 Shareable URLs** — the current market, location and inputs are encoded in
-  the URL; copy the link from the sidebar to share or bookmark a view.
+  neighbourhood median (US only).
+- **🔗 Shareable URLs** — the selected country, market, location and inputs are
+  encoded in the URL; copy the link from the sidebar to share or bookmark a view.
 - **📡 Data status** — the sidebar shows whether market data is `live` or from
   the snapshot, when it was fetched, and a **Refresh** button.
 
@@ -312,6 +345,7 @@ feature-importance aggregation and inference ranges.
 ## 🗺️ Roadmap
 
 - [x] Add rents (ZORI) and gross rental yield per market.
+- [x] Six-country switcher (US, UK, Canada, Australia, China, South Africa).
 - [ ] Add inventory, days-on-market and sale-to-list metrics.
 - [ ] Swap synthetic listings for a real listing-level dataset behind the same
       loader interface.
@@ -340,5 +374,8 @@ interactive product.
 Released under the MIT License.
 
 Market data © [Zillow](https://www.zillow.com/research/data/) (ZHVI home values
-and ZORI rents), used under their public research terms. Listing-level estimates
-are illustrative and do not constitute financial advice.
+and ZORI rents) under their public research terms; international indices ©
+[Bank for International Settlements](https://data.bis.org/topics/SPP); UK prices
+© [HM Land Registry](https://landregistry.data.gov.uk/app/ukhpi) under the Open
+Government Licence. Listing-level estimates are illustrative and do not
+constitute financial advice.

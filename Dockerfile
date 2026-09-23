@@ -22,7 +22,7 @@ RUN pip install --no-cache-dir --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 # Application code and committed artifacts.
-COPY app.py config.py data_loader.py market_data.py model.py ./
+COPY app.py config.py data_loader.py market_data.py international_data.py model.py ./
 COPY .streamlit/ ./.streamlit/
 COPY market_data/ ./market_data/
 COPY models/ ./models/

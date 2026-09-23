@@ -37,6 +37,11 @@ MARKET_RENTS_PATH: Path = MARKET_DATA_DIR / "market_rents.csv"
 # Runtime cache for live Zillow fetches.
 MARKET_CACHE_DIR: Path = DATA_DIR / "cache"
 
+# International market data (BIS + HM Land Registry).
+INTERNATIONAL_DATA_DIR: Path = MARKET_DATA_DIR / "international"
+BIS_INDEX_PATH: Path = INTERNATIONAL_DATA_DIR / "bis_index.csv"
+UK_REGIONS_PATH: Path = INTERNATIONAL_DATA_DIR / "uk_regions.csv"
+
 # --------------------------------------------------------------------------- #
 # Reproducibility
 # --------------------------------------------------------------------------- #
@@ -82,6 +87,10 @@ ZILLOW_METRO_ZORI_URL: str = (
 ZILLOW_ATTRIBUTION: str = (
     "Market data: Zillow Research (ZHVI home values, ZORI rents), latest published month."
 )
+BIS_ATTRIBUTION: str = (
+    "International: BIS Selected Residential Property Prices (nominal, 2010=100); "
+    "UK prices: HM Land Registry (OGL)."
+)
 
 #: How many of the largest US metros to expose in the market selector.
 TOP_N_MARKETS: int = 15
@@ -91,6 +100,37 @@ NEIGHBORHOODS_PER_MARKET: int = 12
 MARKET_HISTORY_MONTHS: int = 180
 NEIGHBORHOOD_HISTORY_MONTHS: int = 120
 RENT_HISTORY_MONTHS: int = 60
+
+# --------------------------------------------------------------------------- #
+# International markets (BIS residential property prices + UK Land Registry)
+# --------------------------------------------------------------------------- #
+#: BIS "Selected Residential Property Prices" bulk file (free, no API key).
+BIS_SPP_URL: str = "https://data.bis.org/static/bulk/WS_SPP_csv_col.zip"
+#: Quarterly observations retained for the international comparison.
+INTERNATIONAL_HISTORY_QUARTERS: int = 80
+#: Monthly UK nation observations retained.
+UK_HISTORY_MONTHS: int = 120
+
+#: Countries exposed by the switcher. ``code`` matches the BIS ``REF_AREA``.
+COUNTRIES: dict[str, dict[str, str]] = {
+    "US": {"name": "United States", "source": "Zillow Research"},
+    "GB": {"name": "United Kingdom", "source": "HM Land Registry · BIS"},
+    "CA": {"name": "Canada", "source": "BIS"},
+    "AU": {"name": "Australia", "source": "BIS"},
+    "CN": {"name": "China", "source": "BIS"},
+    "ZA": {"name": "South Africa", "source": "BIS"},
+}
+
+#: Display order of the country switcher.
+COUNTRY_ORDER: list[str] = ["US", "GB", "CA", "AU", "CN", "ZA"]
+
+#: UK nations available in the UK regional view (HM Land Registry slugs).
+UK_NATIONS: dict[str, str] = {
+    "england": "England",
+    "scotland": "Scotland",
+    "wales": "Wales",
+    "northern-ireland": "Northern Ireland",
+}
 #: Hours a live fetch is cached on disk before being refreshed.
 MARKET_CACHE_TTL_HOURS: int = 24
 #: Network timeout (seconds) for Zillow fetches.

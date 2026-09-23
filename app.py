@@ -26,6 +26,7 @@ import streamlit as st
 from sklearn.model_selection import train_test_split
 
 import config
+import international_data
 import market_data
 import model as model_lib
 from data_loader import get_location_stats, load_or_create_data
@@ -264,6 +265,12 @@ def get_market_overview(force_refresh: bool = False) -> dict:
     return market_data.get_market_data(force_refresh=force_refresh)
 
 
+@st.cache_data(ttl=3600, show_spinner="Loading international data...")
+def get_international(force_refresh: bool = False) -> dict:
+    """Load international market data (BIS live-or-snapshot + UK regions)."""
+    return international_data.get_country_data(force_refresh=force_refresh)
+
+
 @st.cache_data(show_spinner=False)
 def get_hood_meta() -> pd.DataFrame:
     """Neighbourhood metadata joined to market names, with display labels."""
@@ -319,6 +326,39 @@ def render_market_selector(summary: pd.DataFrame, source: str, fetched_at) -> pd
     stamp = fetched_at.strftime("%d %b %H:%M") if hasattr(fetched_at, "strftime") else "—"
     st.sidebar.caption(f"Source: {badge} · updated {stamp} UTC")
     return label_to_row[choice]
+
+
+def render_country_selector() -> str:
+    """Render the country switcher and return the selected country code."""
+    st.sidebar.markdown("### 🗺️ Country")
+    codes = list(config.COUNTRY_ORDER)
+    if "country_select" not in st.session_state:
+        wanted = st.query_params.get("country")
+        st.session_state["country_select"] = wanted if wanted in codes else "US"
+
+    code = st.sidebar.selectbox(
+        "Select a country",
+        options=codes,
+        format_func=lambda c: config.COUNTRIES[c]["name"],
+        key="country_select",
+        help="United States: full metro/neighborhood analytics. Others: national BIS data.",
+    )
+    st.query_params["country"] = code
+    return code
+
+
+def render_international_sidebar(country_code: str) -> None:
+    """Explain the international (non-US) experience in the sidebar."""
+    name = international_data.country_name(country_code)
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 📡 International Market")
+    st.sidebar.caption(f"National market data for **{name}**.")
+    st.sidebar.info(
+        "Live valuation and neighborhood analytics are available for the "
+        "**United States** only (real listing-level data). For this country we "
+        "show real national market data from the Bank for International "
+        "Settlements (BIS) — switch back to the US to estimate a property."
+    )
 
 
 def render_filters(df: pd.DataFrame, market: str, hoods: pd.DataFrame) -> pd.DataFrame:
@@ -488,6 +528,139 @@ def render_prediction_tool(
 # --------------------------------------------------------------------------- #
 # Tabs
 # --------------------------------------------------------------------------- #
+def render_international_tab(intl: dict, country_code: str) -> None:
+    """International market view: national index, trends and comparison."""
+    summary = intl["summary"]
+    bis = intl["bis"]
+    source = intl["source"]
+    row = summary[summary["country_code"] == country_code].iloc[0]
+    name = international_data.country_name(country_code)
+
+    badge = "🟢 live" if source == "live" else "🟡 snapshot"
+    st.markdown(f"#### {name} — national market")
+    st.caption(
+        f"BIS nominal house price index (2010 = 100) · quarterly · "
+        f"latest {row['period']} · source: {badge}"
+    )
+
+    col_1, col_2, col_3, col_4 = st.columns(4)
+    with col_1:
+        kpi_card("House Price Index", f"{row['index']:.1f}", f"Latest {row['period']}")
+    with col_2:
+        kpi_card("Year over Year", f"{row['yoy_pct']:+.1f}%", "Nominal, BIS")
+    with col_3:
+        kpi_card("5-Year Change", f"{row['change_5y_pct']:+.1f}%", "Nominal index")
+    with col_4:
+        kpi_card("Coverage", "National", "Index-based (not prices)")
+
+    st.markdown("<br/>", unsafe_allow_html=True)
+
+    tab_overview, tab_compare, *rest = st.tabs(
+        ["📈 Overview", "🌍 All Countries"] + (["🇬🇧 UK Regions"] if country_code == "GB" else [])
+    )
+
+    with tab_overview:
+        _render_country_overview(bis, country_code)
+    with tab_compare:
+        _render_comparison(intl["comparison"], summary)
+    if country_code == "GB" and rest:
+        with rest[0]:
+            _render_uk_regions(intl["uk_regions"], intl["uk_summary"])
+
+
+def _render_country_overview(bis: pd.DataFrame, country_code: str) -> None:
+    """Index and YoY trend for a single country."""
+    series = bis[bis["country_code"] == country_code].sort_values("period_date").tail(60).copy()
+
+    st.markdown("#### House Price Index (last 15 years)")
+    trend = go.Figure()
+    trend.add_trace(
+        go.Scatter(
+            x=series["period_date"], y=series["index"], mode="lines",
+            line=dict(color=config.COLORS["primary"], width=3),
+            fill="tozeroy", fillcolor="rgba(79,70,229,0.08)",
+            hovertemplate="%{x|%Y-Q%q}<br>Index %{y:.1f}<extra></extra>",
+        )
+    )
+    trend = style_figure(trend, height=360)
+    st.plotly_chart(trend, width="stretch")
+
+    st.markdown("#### Year-over-Year Change")
+    colors = [config.COLORS["success"] if v >= 0 else config.COLORS["danger"] for v in series["yoy_pct"]]
+    yoy = go.Figure(go.Bar(x=series["period_date"], y=series["yoy_pct"], marker_color=colors))
+    yoy.add_hline(y=0, line_color=config.COLORS["muted"], line_width=1)
+    yoy.update_yaxes(ticksuffix="%")
+    yoy = style_figure(yoy, height=320)
+    st.plotly_chart(yoy, width="stretch")
+
+
+def _render_comparison(comparison: pd.DataFrame, summary: pd.DataFrame) -> None:
+    """Cross-country indexed growth and latest growth comparison."""
+    st.markdown("#### Home Price Growth — Indexed (window start = 100)")
+    st.caption("All six countries indexed to 100 at the start of a common window.")
+    growth = px.line(
+        comparison, x="period_date", y="indexed", color="country",
+        color_discrete_sequence=config.CHART_SEQUENCE,
+        labels={"period_date": "", "indexed": "Index (start = 100)", "country": ""},
+    )
+    growth.update_traces(line=dict(width=2.4))
+    growth = style_figure(growth, height=460)
+    st.plotly_chart(growth, width="stretch")
+
+    st.markdown("#### Latest Year-over-Year Growth")
+    frame = summary.sort_values("yoy_pct")
+    colors = [config.COLORS["success"] if v >= 0 else config.COLORS["danger"] for v in frame["yoy_pct"]]
+    bars = go.Figure(
+        go.Bar(
+            x=frame["yoy_pct"], y=frame["country"], orientation="h",
+            marker_color=colors, text=[f"{v:+.1f}%" for v in frame["yoy_pct"]],
+            textposition="outside", cliponaxis=False,
+            hovertemplate="%{y}<br>%{x:.2f}%<extra></extra>",
+        )
+    )
+    bars.add_vline(x=0, line_color=config.COLORS["muted"], line_width=1)
+    bars.update_xaxes(ticksuffix="%")
+    bars = style_figure(bars, height=360)
+    st.plotly_chart(bars, width="stretch")
+
+
+def _render_uk_regions(uk_regions: pd.DataFrame, uk_summary: pd.DataFrame) -> None:
+    """UK nation prices, HPI and trends (HM Land Registry, GBP)."""
+    st.markdown("#### Average House Price by UK Nation")
+    st.caption("HM Land Registry UK House Price Index · monthly · GBP.")
+    bars = px.bar(
+        uk_summary.sort_values("avg_price_gbp"), x="avg_price_gbp", y="region",
+        orientation="h", text="avg_price_gbp",
+        labels={"avg_price_gbp": "Average price (£)", "region": ""},
+        color="avg_price_gbp", color_continuous_scale=["#BAE6FD", config.COLORS["accent"]],
+    )
+    bars.update_traces(texttemplate="£%{text:,.0f}", textposition="outside", cliponaxis=False)
+    bars.update_layout(coloraxis_showscale=False)
+    bars.update_xaxes(tickprefix="£", tickformat=",")
+    bars = style_figure(bars, height=320)
+    st.plotly_chart(bars, width="stretch")
+
+    st.markdown("#### Average Price Trend")
+    trend = px.line(
+        uk_regions, x="month_date", y="avg_price_gbp", color="region",
+        color_discrete_sequence=config.CHART_SEQUENCE, labels={"month_date": "", "avg_price_gbp": "Average price (£)", "region": ""},
+    )
+    trend.update_traces(line=dict(width=2.4))
+    trend.update_yaxes(tickprefix="£", tickformat=",")
+    trend = style_figure(trend, height=420)
+    st.plotly_chart(trend, width="stretch")
+
+    table = uk_summary.rename(
+        columns={
+            "region": "Nation", "month": "Month", "avg_price_gbp": "Average Price (£)",
+            "hpi": "HPI", "yoy_pct": "YoY (%)",
+        }
+    )
+    table["Average Price (£)"] = table["Average Price (£)"].map(lambda v: f"£{v:,.0f}")
+    table["YoY (%)"] = table["YoY (%)"].map(lambda v: f"{v:+.1f}%")
+    st.dataframe(table, width="stretch", hide_index=True)
+
+
 def render_markets_tab(
     market_row,
     summary: pd.DataFrame,
@@ -840,23 +1013,8 @@ def render_data_tab(df: pd.DataFrame, hoods: pd.DataFrame, market: str) -> None:
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
-def main() -> None:
-    inject_css()
-
-    data = get_data()
-    model, metrics, importance = get_model()
-    hood_meta = get_hood_meta()
-
-    # --- Sidebar: market data status + manual refresh --------------------- #
-    st.sidebar.markdown("### 📡 Market Data")
-    force_refresh = st.sidebar.button(
-        "🔄 Refresh market data",
-        width="stretch",
-        help="Re-fetch the latest Zillow data now, bypassing the 24-hour cache.",
-    )
-    if force_refresh:
-        get_market_overview.clear()
-
+def _render_us_dashboard(data, model, metrics, importance, hood_meta, force_refresh: bool) -> None:
+    """The full United States experience (markets, analytics, valuation)."""
     overview = get_market_overview(force_refresh)
     summary = overview["summary"]
     history = overview["history"]
@@ -931,6 +1089,61 @@ def main() -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def _render_international_dashboard(country_code: str, force_refresh: bool) -> None:
+    """The international (non-US) market-insights experience."""
+    intl = get_international(force_refresh)
+    name = international_data.country_name(country_code)
+
+    st.markdown(
+        f"""
+        <div class="hero">
+            <h1>🏙️ {name} — Market Insights</h1>
+            <p>National house price index · quarterly · interactive comparison</p>
+            <span class="live-badge">{config.BIS_ATTRIBUTION}</span>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    render_international_sidebar(country_code)
+    render_international_tab(intl, country_code)
+
+    st.markdown(
+        f"""
+        <div class="footer">
+            {config.BIS_ATTRIBUTION} · National, index-based data (not listing prices).
+            Valuation and neighborhood analytics are available for the United States.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def main() -> None:
+    inject_css()
+
+    data = get_data()
+    model, metrics, importance = get_model()
+    hood_meta = get_hood_meta()
+
+    # --- Sidebar: market data refresh ------------------------------------- #
+    st.sidebar.markdown("### 📡 Market Data")
+    force_refresh = st.sidebar.button(
+        "🔄 Refresh market data",
+        width="stretch",
+        help="Re-fetch the latest market data now, bypassing the 24-hour cache.",
+    )
+    if force_refresh:
+        get_market_overview.clear()
+        get_international.clear()
+
+    country_code = render_country_selector()
+    if country_code == "US":
+        _render_us_dashboard(data, model, metrics, importance, hood_meta, force_refresh)
+    else:
+        _render_international_dashboard(country_code, force_refresh)
 
 
 if __name__ == "__main__":
