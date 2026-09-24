@@ -1,6 +1,7 @@
 # 🏙️ Real Estate Price Estimator & Market Insights Dashboard
 
 [![CI](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/ci.yml)
+[![Docker](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/docker.yml/badge.svg)](https://github.com/armand-vw/Property-Price-Market-Dashboard/actions/workflows/docker.yml)
 [![Project Page](https://img.shields.io/badge/Project%20Page-GitHub%20Pages-4F46E5?logo=githubpages&logoColor=white)](https://armand-vw.github.io/Property-Price-Market-Dashboard/)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e.svg)](LICENSE)
@@ -69,6 +70,9 @@ market snapshot and fitted model are committed, so it even runs fully offline
 - **Plain-English education layer** — ⓘ tooltips and a Market 101 glossary,
   an auto-generated “what this means” summary, and a **Hot / Warm / Cool**
   market temperature for every selection.
+- **Explainable valuations** — every estimate comes with a **“Why this
+  estimate?”** chart of per-feature SHAP contributions (via XGBoost's built-in
+  `pred_contribs`, no extra dependency) plus aggregated feature importances.
 - **Location-based valuation** — estimate any US property via a single location
   dropdown (no metro picker needed); the model derives the metro internally.
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
@@ -127,7 +131,10 @@ Property-Price-Market-Dashboard/
 ├── tests/                       # pytest suite (offline)
 ├── .github/workflows/
 │   ├── ci.yml                   # CI: ruff lint + pytest on push / PR
+│   ├── docker.yml               # Build + health-check the Docker image
 │   └── refresh-market-data.yml  # Monthly Zillow snapshot refresh
+├── MODEL_CARD.md                # Model documentation, metrics, limitations
+├── CHANGELOG.md                 # Release history
 ├── requirements.txt             # Pinned runtime dependencies
 ├── requirements-dev.txt         # Dev tools (ruff, pytest, matplotlib)
 ├── pyproject.toml               # Project metadata + ruff/pytest config
@@ -324,7 +331,8 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 - **🎯 Live Valuation Tool (sidebar)** — pick any US **Location** (all ~180
   neighbourhoods, metro shown in the label), set the property details and press
   **Estimate Value** to get the estimate, an empirical valuation range, and a
-  comparison against the **real** neighbourhood median.
+  comparison against the **real** neighbourhood median. A **“Why this
+  estimate?”** chart breaks down each factor's SHAP contribution.
 - **🔗 Shareable URLs** — the selected country, location and inputs are encoded
   in the URL; copy the link from the sidebar to share or bookmark a view.
 - **📡 Data status** — the sidebar shows whether market data is `live` or from
@@ -338,10 +346,15 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 pytest -q
 ```
 
-The suite is **network-free**: it uses the committed market snapshot and small
-synthetic fixtures, covering data reproducibility, cleaning invariants, schema
-validation, market aggregation, live-to-snapshot fallback, pipeline fitting,
-feature-importance aggregation and inference ranges.
+The suite is **network-free** (56 tests): it uses the committed market snapshot
+and small synthetic fixtures, covering data reproducibility, cleaning
+invariants, schema validation, market + international aggregation,
+live-to-snapshot fallback, pipeline fitting, feature-importance aggregation,
+SHAP explanation, the Hot/Warm/Cool temperature and the plain-English narrative,
+plus Streamlit `AppTest` UI smoke tests.
+
+See [`MODEL_CARD.md`](MODEL_CARD.md) for model documentation and
+[`CHANGELOG.md`](CHANGELOG.md) for release history.
 
 ---
 
@@ -373,9 +386,10 @@ feature-importance aggregation and inference ranges.
 - [ ] Add days-on-market / sale-to-list and price-cut share.
 - [ ] Swap synthetic listings for a real listing-level dataset behind the same
       loader interface.
-- [ ] SHAP values for per-prediction explainability.
+- [x] SHAP values for per-prediction explainability (XGBoost `pred_contribs`).
 - [ ] Hyper-parameter tuning with Optuna and cross-validated MAPE.
 - [x] Containerise with Docker (self-contained, no external hosting).
+- [x] Docker image built and health-checked in CI.
 - [x] Live real market data with snapshot fallback.
 - [x] Continuous integration with GitHub Actions (`pytest` + `ruff`).
 - [x] Static project page on GitHub Pages.

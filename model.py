@@ -327,6 +327,56 @@ def _base_feature(encoded_name: str) -> str:
     return base
 
 
+def explain_prediction(
+    model: TransformedTargetRegressor,
+    features: dict[str, Any],
+    top_n: int | None = 8,
+) -> pd.DataFrame | None:
+    """Explain a single prediction with XGBoost's built-in SHAP contributions.
+
+    Uses ``booster.predict(pred_contribs=True)`` so **no extra dependency** is
+    required. Contributions are returned in the model's ``log1p`` space; they
+    are converted to an approximate percentage effect on the price
+    (``exp(contribution) - 1``) and aggregated back to base features.
+
+    Returns ``None`` when the estimator has no booster (e.g. the Random Forest
+    fallback), so callers can degrade gracefully.
+    """
+    pipeline: Pipeline = model.regressor_
+    preprocessor: ColumnTransformer = pipeline.named_steps["preprocessor"]
+    estimator = pipeline.named_steps["model"]
+
+    try:
+        booster = estimator.get_booster()
+    except AttributeError:
+        return None
+
+    try:
+        from xgboost import DMatrix
+    except ImportError:  # pragma: no cover - depends on environment
+        return None
+
+    frame = features_to_frame(features)
+    transformed = preprocessor.transform(frame)
+    contributions = booster.predict(DMatrix(transformed), pred_contribs=True)[0]
+
+    names = list(preprocessor.get_feature_names_out())
+    frame = pd.DataFrame(
+        {"feature": [_base_feature(name) for name in names], "log_contribution": contributions[:-1]}
+    )
+    grouped = (
+        frame.groupby("feature", as_index=False)["log_contribution"]
+        .sum()
+        .assign(impact_pct=lambda df: (np.exp(df["log_contribution"]) - 1.0) * 100.0)
+    )
+    grouped["abs_impact"] = grouped["impact_pct"].abs()
+    grouped = grouped.sort_values("abs_impact", ascending=False).drop(columns="abs_impact")
+
+    if top_n is not None:
+        grouped = grouped.head(top_n)
+    return grouped[["feature", "impact_pct", "log_contribution"]].reset_index(drop=True)
+
+
 # --------------------------------------------------------------------------- #
 # Persistence & inference helpers
 # --------------------------------------------------------------------------- #

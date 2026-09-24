@@ -8,7 +8,10 @@ import pandas as pd
 import config
 from model import (
     build_pipeline,
+    build_preprocessor,
     compute_metrics,
+    ensure_model,
+    explain_prediction,
     features_to_frame,
     get_feature_importance,
     predict_with_range,
@@ -85,3 +88,27 @@ def test_predict_with_range_ordering(clean_df: pd.DataFrame, single_property: di
     assert estimate["low"] <= estimate["point"] <= estimate["high"]
     assert estimate["point"] > 0
     assert estimate["half_width_pct"] > 0
+
+
+def test_explain_prediction_returns_contributions(single_property: dict) -> None:
+    model, _, _ = ensure_model()
+    explanation = explain_prediction(model, single_property)
+
+    # The committed artifact is XGBoost, so contributions are available.
+    assert explanation is not None
+    assert {"feature", "impact_pct", "log_contribution"}.issubset(explanation.columns)
+    assert not explanation.empty
+    assert explanation["feature"].is_unique
+    assert explanation["impact_pct"].abs().max() > 0
+
+
+def test_explain_prediction_none_without_booster(clean_df: pd.DataFrame, single_property: dict) -> None:
+    from sklearn.compose import TransformedTargetRegressor
+    from sklearn.linear_model import LinearRegression
+    from sklearn.pipeline import Pipeline
+
+    pipeline = Pipeline([("preprocessor", build_preprocessor()), ("model", LinearRegression())])
+    model = TransformedTargetRegressor(regressor=pipeline)
+    model.fit(clean_df[config.FEATURE_COLUMNS], clean_df[config.TARGET_COLUMN])
+
+    assert explain_prediction(model, single_property) is None

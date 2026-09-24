@@ -1,0 +1,42 @@
+name: Docker
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: docker-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & smoke-test image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t property-insights .
+
+      - name: Run container
+        run: docker run -d --name property-insights -p 8501:8501 property-insights
+
+      - name: Wait for health
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8501/_stcore/health >/dev/null; then
+              echo "Container healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Health check failed; container logs:"
+          docker logs property-insights
+          exit 1
+
+      - name: Cleanup
+        if: always()
+        run: docker rm -f property-insights || true

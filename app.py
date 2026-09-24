@@ -194,6 +194,39 @@ def render_glossary() -> None:
             st.markdown(f"**{term.replace('_', ' ').title()}** — {definition}")
 
 
+def render_valuation_explainer(model) -> None:
+    """Explain the most recent estimate with per-feature SHAP contributions."""
+    features = st.session_state.get("prediction_features")
+    if not features:
+        return
+    explanation = model_lib.explain_prediction(model, features)
+    if explanation is None or explanation.empty:
+        return
+
+    with st.expander("🔍 Why this estimate? — what pushed the price up or down", expanded=True):
+        st.caption(
+            "Approximate effect of each factor on this estimate (XGBoost SHAP "
+            "contributions, shown as a percentage of the model's baseline). "
+            "Green pulls the price up, red pulls it down."
+        )
+        frame = explanation.sort_values("impact_pct")
+        colors = [
+            config.COLORS["success"] if v >= 0 else config.COLORS["danger"]
+            for v in frame["impact_pct"]
+        ]
+        figure = go.Figure(
+            go.Bar(
+                x=frame["impact_pct"], y=frame["feature"], orientation="h",
+                marker_color=colors, text=[f"{v:+.0f}%" for v in frame["impact_pct"]],
+                textposition="outside", cliponaxis=False,
+                hovertemplate="%{y}<br>%{x:+.1f}%<extra></extra>",
+            )
+        )
+        figure.add_vline(x=0, line_color=config.COLORS["muted"], line_width=1)
+        figure.update_xaxes(ticksuffix="%")
+        st.plotly_chart(style_figure(figure, 320), width="stretch")
+
+
 # --------------------------------------------------------------------------- #
 # Query-parameter state (shareable URLs)
 # --------------------------------------------------------------------------- #
@@ -965,6 +998,8 @@ def _render_us_dashboard(data, model, metrics, importance, hood_meta, force_refr
                  "Held-out variance explained", config.GLOSSARY["r2"])
 
     st.markdown("<br/>", unsafe_allow_html=True)
+
+    render_valuation_explainer(model)
 
     tab_national, tab_analytics, tab_model, tab_data = st.tabs(
         ["🇺🇸 National", "📊 Market Analytics", "🤖 Model Insights", "🗂️ Data Explorer"]
