@@ -40,6 +40,9 @@ Repository = "https://github.com/armand-vw/Property-Price-Market-Dashboard"
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["property_insights"]
+
 # --------------------------------------------------------------------------- #
 # Tooling
 # --------------------------------------------------------------------------- #

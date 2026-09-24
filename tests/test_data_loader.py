@@ -6,8 +6,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-import config
-from data_loader import (
+from property_insights import config
+from property_insights.data_loader import (
     generate_synthetic_data,
     get_location_stats,
     get_market_stats,

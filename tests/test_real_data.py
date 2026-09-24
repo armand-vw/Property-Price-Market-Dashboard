@@ -7,8 +7,7 @@ import pytest
 from sklearn.dummy import DummyRegressor
 from sklearn.pipeline import Pipeline
 
-import config
-import real_data
+from property_insights import config, real_data
 
 
 def test_load_real_data_schema() -> None:

@@ -37,7 +37,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import config  # noqa: E402
+from property_insights import config  # noqa: E402
 
 MONTH_PATTERN = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 ID_COLUMNS = [

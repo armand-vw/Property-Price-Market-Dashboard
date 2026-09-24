@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import insights
+from property_insights import insights
 
 
 def test_temperature_hot() -> None:

@@ -24,7 +24,7 @@ Artifacts written by :func:`train_pipeline`::
 
 Run directly to train from the command line::
 
-    python model.py
+    python -m property_insights.model
 """
 
 from __future__ import annotations
@@ -44,9 +44,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
-import config
-import market_data
-from data_loader import load_or_create_data
+from . import config, market_data
+from .data_loader import load_or_create_data
 
 
 # --------------------------------------------------------------------------- #
@@ -384,7 +383,7 @@ def load_pipeline(path=config.MODEL_PATH) -> TransformedTargetRegressor:
     """Load a persisted pipeline from disk."""
     if not path.exists():
         raise FileNotFoundError(
-            f"No trained model at {path}. Run `python model.py` first."
+            f"No trained model at {path}. Run `python -m property_insights.model` first."
         )
     return joblib.load(path)
 

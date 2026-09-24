@@ -5,8 +5,8 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-import config
-from model import (
+from property_insights import config
+from property_insights.model import (
     build_pipeline,
     build_preprocessor,
     compute_metrics,

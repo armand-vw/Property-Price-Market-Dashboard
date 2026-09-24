@@ -6,14 +6,17 @@ venv/
 .github/
 .gitignore
 .pytest_cache/
+.ruff_cache/
 __pycache__/
 *.py[cod]
 *.egg-info/
 
 # Not needed at runtime
 data/
+datasets/
 docs/
-assets/
+notebooks/
+reports/
 tests/
 scripts/
 conftest.py
@@ -21,4 +24,3 @@ conftest.py
 requirements-dev.txt
 pyproject.toml
 LICENSE
-runtime.txt

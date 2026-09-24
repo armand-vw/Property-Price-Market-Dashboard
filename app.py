@@ -26,12 +26,9 @@ import plotly.graph_objects as go
 import streamlit as st
 from sklearn.model_selection import train_test_split
 
-import config
-import insights
-import international_data
-import market_data
-import model as model_lib
-from data_loader import get_market_stats, load_or_create_data
+from property_insights import config, insights, international_data, market_data
+from property_insights import model as model_lib
+from property_insights.data_loader import get_market_stats, load_or_create_data
 
 # --------------------------------------------------------------------------- #
 # Page setup

@@ -28,7 +28,7 @@ from pathlib import Path
 
 import pandas as pd
 
-import config
+from . import config
 
 BIS_UNIT_INDEX = "628"
 BIS_UNIT_YOY = "771"

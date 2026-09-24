@@ -32,8 +32,8 @@ from sklearn.metrics import (
 from sklearn.model_selection import RandomizedSearchCV, cross_validate
 from sklearn.pipeline import Pipeline
 
-import config
-import model as model_lib
+from . import config
+from . import model as model_lib
 
 AMES_PATH: Path = config.BASE_DIR / "datasets" / "ames.csv"
 

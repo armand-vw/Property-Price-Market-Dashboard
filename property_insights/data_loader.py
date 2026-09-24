@@ -12,7 +12,7 @@ provide.
 
 Run directly to (re)generate the dataset::
 
-    python data_loader.py --force
+    python -m property_insights.data_loader --force
 """
 
 from __future__ import annotations
@@ -23,8 +23,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import config
-import market_data
+from . import config, market_data
 
 
 # --------------------------------------------------------------------------- #

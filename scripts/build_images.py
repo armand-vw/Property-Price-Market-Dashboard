@@ -1,7 +1,8 @@
 """
 scripts/build_images.py
 =======================
-Generate static PNG charts for the README from the committed market snapshot.
+Generate the README hero image (``docs/hero.png``) from the committed market
+snapshot. The same file is served by the GitHub Pages site for social previews.
 
 Uses matplotlib (headless, no browser required) with the same light-corporate
 palette as the dashboard. Reads only committed data (``market_data/`` and
@@ -28,10 +29,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import config  # noqa: E402
-import market_data  # noqa: E402
+from property_insights import (  # noqa: E402
+    config,  # noqa: E402
+    market_data,  # noqa: E402
+)
 
-ASSETS_DIR = PROJECT_ROOT / "assets"
+DOCS_DIR = PROJECT_ROOT / "docs"
 
 INK = config.COLORS["ink"]
 MUTED = config.COLORS["muted"]
@@ -154,38 +157,21 @@ def make_hero(summary: pd.DataFrame, history: pd.DataFrame, importance: pd.DataF
         ha="left",
     )
     fig.tight_layout(rect=[0, 0, 1, 0.94])
-    fig.savefig(ASSETS_DIR / "hero.png", dpi=130, bbox_inches="tight")
+    fig.savefig(DOCS_DIR / "hero.png", dpi=130, bbox_inches="tight")
     plt.close(fig)
 
 
-def save_individual(summary: pd.DataFrame, history: pd.DataFrame, importance: pd.DataFrame) -> None:
-    """Save each chart as its own PNG for granular embedding."""
-    charts = [
-        ("market_values", lambda ax: plot_market_values(summary, ax), (9, 6)),
-        ("rental_yield", lambda ax: plot_rental_yield(summary, ax), (9, 6)),
-        ("market_growth", lambda ax: plot_market_growth(history, summary, ax), (9, 5)),
-        ("feature_importance", lambda ax: plot_feature_importance(importance, ax), (9, 5)),
-    ]
-    for name, draw, size in charts:
-        fig, ax = plt.subplots(figsize=size)
-        draw(ax)
-        fig.tight_layout()
-        fig.savefig(ASSETS_DIR / f"{name}.png", dpi=140, bbox_inches="tight")
-        plt.close(fig)
-
-
 def main() -> None:
-    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    DOCS_DIR.mkdir(parents=True, exist_ok=True)
     summary, history, importance = _snapshot()
 
     make_hero(summary, history, importance)
-    save_individual(summary, history, importance)
 
+    hero = DOCS_DIR / "hero.png"
     print("=" * 62)
-    print("README images generated")
+    print("README hero image generated")
     print("=" * 62)
-    for path in sorted(ASSETS_DIR.glob("*.png")):
-        print(f"  {path.name:<26} {path.stat().st_size / 1e3:7.1f} KB")
+    print(f"  {hero.name:<26} {hero.stat().st_size / 1e3:7.1f} KB")
 
 
 if __name__ == "__main__":

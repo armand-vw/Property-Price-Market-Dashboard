@@ -29,12 +29,14 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import config  # noqa: E402
-import insights  # noqa: E402
-import international_data  # noqa: E402
-import market_data  # noqa: E402
-from data_loader import load_or_create_data  # noqa: E402
-from model import ensure_model  # noqa: E402
+from property_insights import (  # noqa: E402
+    config,  # noqa: E402
+    insights,  # noqa: E402
+    international_data,  # noqa: E402
+    market_data,  # noqa: E402
+)
+from property_insights.data_loader import load_or_create_data  # noqa: E402
+from property_insights.model import ensure_model  # noqa: E402
 
 REPO_URL = "https://github.com/armand-vw/Property-Price-Market-Dashboard"
 PAGES_URL = "https://armand-vw.github.io/Property-Price-Market-Dashboard/"
@@ -714,11 +716,6 @@ def main() -> None:
         data, summary, history, comparison, bis, intl["summary"], health, metrics, importance
     )
     INDEX_PATH.write_text(page, encoding="utf-8")
-
-    # Publish a hero image for social previews (Pages serves only docs/).
-    hero_source = PROJECT_ROOT / "assets" / "hero.png"
-    if hero_source.exists():
-        (DOCS_DIR / "hero.png").write_bytes(hero_source.read_bytes())
 
     print("=" * 62)
     print("GitHub Pages site generated")

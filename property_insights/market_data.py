@@ -27,7 +27,7 @@ from pathlib import Path
 
 import pandas as pd
 
-import config
+from . import config
 
 #: Human-readable provenance of the most recent market data load.
 LAST_SOURCE: str = "unknown"

@@ -5,8 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-import config
-import international_data
+from property_insights import config, international_data
 
 
 def test_load_bis_index() -> None:

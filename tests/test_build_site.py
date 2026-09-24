@@ -6,9 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 
-import config
-import international_data
-import market_data
+from property_insights import config, international_data, market_data
 
 BUILD_SITE_PATH = Path(__file__).resolve().parents[1] / "scripts" / "build_site.py"
 

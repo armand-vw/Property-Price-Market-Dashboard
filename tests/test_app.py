@@ -6,8 +6,7 @@ from pathlib import Path
 
 from streamlit.testing.v1 import AppTest
 
-import international_data
-import market_data
+from property_insights import international_data, market_data
 
 APP_PATH = str(Path(__file__).resolve().parents[1] / "app.py")
 

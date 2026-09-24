@@ -33,8 +33,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import config  # noqa: E402
-from international_data import fetch_uk_regions, parse_bis_zip  # noqa: E402
+from property_insights import config  # noqa: E402
+from property_insights.international_data import (  # noqa: E402
+    fetch_uk_regions,
+    parse_bis_zip,
+)
 
 
 def download(url: str, destination: Path, redownload: bool = False) -> Path:

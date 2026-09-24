@@ -12,7 +12,7 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 
 <p align="center">
   <a href="https://armand-vw.github.io/Property-Price-Market-Dashboard/">
-    <img src="assets/hero.png" alt="Home values, rental yield, growth and feature importance across 15 US metros" width="100%" />
+    <img src="docs/hero.png" alt="Home values, rental yield, growth and feature importance across 15 US metros" width="100%" />
   </a>
 </p>
 
@@ -109,11 +109,14 @@ market snapshot and fitted model are committed, so it even runs fully offline
 ```
 Property-Price-Market-Dashboard/
 ├── app.py                       # Streamlit dashboard (entry point)
-├── market_data.py               # Zillow fetch, cache, fallback, aggregates
-├── international_data.py        # BIS + UK Land Registry fetch/aggregates
-├── data_loader.py               # Market-anchored synthesis + cleaning
-├── model.py                     # Pipeline, training, metrics, persistence
-├── config.py                    # Paths, schema, seeds, palette, constants
+├── property_insights/           # Core Python package
+│   ├── config.py                # Paths, schema, seeds, palette, constants
+│   ├── data_loader.py           # Market-anchored synthesis + cleaning
+│   ├── market_data.py           # Zillow fetch, cache, fallback, aggregates
+│   ├── international_data.py    # BIS + UK Land Registry fetch/aggregates
+│   ├── model.py                 # Pipeline, training, metrics, persistence
+│   ├── insights.py              # Plain-English education layer
+│   └── real_data.py             # Ames loader + cross-validation helpers
 ├── market_data/                 # Committed real-market snapshot (small)
 │   ├── markets.csv              # 15 US metros
 │   ├── market_history.csv       # monthly metro home values
@@ -133,10 +136,8 @@ Property-Price-Market-Dashboard/
 │   ├── fetch_real_dataset.py           # Downloads Ames Housing (real, no key)
 │   ├── benchmark_real_data.py          # CV benchmark → reports/
 │   ├── build_site.py                   # Renders the GitHub Pages site into docs/
-│   └── build_images.py                 # Generates the README charts into assets/
-├── real_data.py                 # Ames loader + cross-validation helpers
-├── docs/                        # GitHub Pages landing page (static)
-├── assets/                      # README chart images
+│   └── build_images.py                 # Generates the README hero → docs/hero.png
+├── docs/                        # GitHub Pages site + hero.png (static)
 ├── tests/                       # pytest suite (offline)
 ├── .github/workflows/
 │   ├── ci.yml                   # CI: ruff lint + pytest on push / PR
@@ -202,10 +203,10 @@ docker run --rm -p 8501:8501 -e RPE_OFFLINE=1 property-insights
 ### Optional CLI
 
 ```bash
-python data_loader.py --force            # rebuild data/housing.csv
-python model.py                          # retrain + print evaluation summary
-python market_data.py                    # print the live US market overview
-python international_data.py             # print the international overview
+python -m property_insights.data_loader --force   # rebuild data/housing.csv
+python -m property_insights.model                  # retrain + evaluation summary
+python -m property_insights.market_data            # print the live US overview
+python -m property_insights.international_data     # print the international overview
 python scripts/build_market_snapshot.py  # refresh US market_data/ from Zillow
 python scripts/build_international_snapshot.py  # refresh BIS + UK snapshots
 python scripts/fetch_real_dataset.py     # download the real Ames dataset
@@ -218,7 +219,7 @@ python -m jupyter nbconvert --to notebook --execute --inplace notebooks/02_model
 
 ## 🧠 How It Works
 
-### 1. Real market data (`market_data.py`)
+### 1. Real market data (`property_insights/market_data.py`)
 
 Zillow Research publishes monthly **ZHVI** (smoothed, seasonally-adjusted typical
 home value) by geography. The app:
@@ -240,7 +241,7 @@ per-metro detail remains in the all-metro comparison charts. A **Refresh** butto
 re-fetches live data on demand, and a scheduled GitHub Actions workflow rebuilds
 the committed snapshot monthly.
 
-### 2. International data (`international_data.py`)
+### 2. International data (`property_insights/international_data.py`)
 
 The country switcher covers **10 major markets**:
 
@@ -256,7 +257,7 @@ Non-US countries show national, index-based insights and a cross-country
 comparison. Only the US exposes listing-level valuation and market health (the
 model is anchored to real US medians); the app states this explicitly.
 
-### 3. Market-anchored synthesis (`data_loader.py`)
+### 3. Market-anchored synthesis (`property_insights/data_loader.py`)
 
 Listing-level features are generated per neighbourhood and priced as:
 
@@ -274,7 +275,7 @@ so cleaning is exercised, then:
 3. IQR winsorisation of `price` and `sqft`,
 4. derived `price_per_sqft` and `property_age`.
 
-### 4. Model pipeline (`model.py`)
+### 4. Model pipeline (`property_insights/model.py`)
 
 ```
 Raw features
@@ -289,7 +290,7 @@ The full object is persisted with `joblib`, so a single artifact accepts raw
 features and returns prices in dollars. If XGBoost is unavailable the pipeline
 falls back to `RandomForestRegressor`.
 
-### 5. Evaluation (`model.py`)
+### 5. Evaluation (`property_insights/model.py`)
 
 80/20 train/test split, scored in dollars: MAE, RMSE, MAPE, median APE, R², and
 a baseline comparison against always predicting the median.
@@ -410,7 +411,7 @@ See [`MODEL_CARD.md`](MODEL_CARD.md) for model documentation and
 - **Bounded threads.** `N_JOBS` is capped (`min(4, cpu)`) to avoid OpenMP
   oversubscription; override with `RPE_N_JOBS`.
 - **Single source of truth.** Paths, schema, seeds and constants live in
-  `config.py`.
+  `property_insights/config.py`.
 
 ---
 

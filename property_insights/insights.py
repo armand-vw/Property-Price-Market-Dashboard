@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import math
 
-import config
+from . import config
 
 
 def _clip(value: float, low: float, high: float) -> float:

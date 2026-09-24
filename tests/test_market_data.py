@@ -5,8 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-import config
-import market_data
+from property_insights import config, market_data
 
 
 def test_load_markets() -> None:

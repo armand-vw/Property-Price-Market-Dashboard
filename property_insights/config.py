@@ -17,7 +17,7 @@ from pathlib import Path
 # --------------------------------------------------------------------------- #
 # Project paths
 # --------------------------------------------------------------------------- #
-BASE_DIR: Path = Path(__file__).resolve().parent
+BASE_DIR: Path = Path(__file__).resolve().parents[1]
 DATA_DIR: Path = BASE_DIR / "data"
 MODEL_DIR: Path = BASE_DIR / "models"
 MARKET_DATA_DIR: Path = BASE_DIR / "market_data"

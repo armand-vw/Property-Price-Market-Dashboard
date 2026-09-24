@@ -3,9 +3,9 @@ conftest.py
 ===========
 Pytest configuration and shared fixtures.
 
-Placing this file at the project root also ensures the root package directory is
-added to ``sys.path`` so tests can ``import config``, ``import model`` etc. when
-run from the repository root (``pytest``).
+Placing this file at the project root ensures the repository root is added to
+``sys.path`` so tests can import the ``property_insights`` package when run from
+the repository root (``pytest``).
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from data_loader import clean_data, generate_synthetic_data
+from property_insights.data_loader import clean_data, generate_synthetic_data
 
 
 @pytest.fixture(scope="session")
