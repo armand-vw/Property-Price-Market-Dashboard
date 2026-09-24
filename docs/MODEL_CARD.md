@@ -73,8 +73,8 @@ cross-validated on the real **Ames Housing** dataset (1,460 actual sales,
 | **XGBoost (project defaults)** | **$20,367** | **$32,228** | **12.1%** | **0.820** |
 | XGBoost (lightly tuned) | $20,192 | $31,986 | 11.9% | 0.827 |
 
-See [`reports/real_data_benchmark.md`](reports/real_data_benchmark.md) and
-[`notebooks/`](notebooks). Ames is a single, static city, so this validates the
+See [`reports/real_data_benchmark.md`](../reports/real_data_benchmark.md) and
+[`notebooks/`](../notebooks). Ames is a single, static city, so this validates the
 *approach* rather than live US coverage.
 
 ## Limitations

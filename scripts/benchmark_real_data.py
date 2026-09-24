@@ -87,7 +87,7 @@ Best hyper-parameters: `{best}`.
 - Ames is a **single, static city** dataset (2006–2010 sales); it validates the
   modelling approach, not live US market coverage.
 - The dashboard's synthetic listings are still used for the interactive product
-  (documented in `MODEL_CARD.md`); this report is the real-data counterpart.
+  (documented in `../docs/MODEL_CARD.md`); this report is the real-data counterpart.
 """
 
 

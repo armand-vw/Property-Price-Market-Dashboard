@@ -11,8 +11,8 @@ to follow [Semantic Versioning](https://semver.org/).
   built-in `pred_contribs` (no extra dependency) and the app shows a
   "Why this estimate?" chart.
 - **Real-data benchmark**: the same pipeline is cross-validated on the real
-  **Ames Housing** dataset (R² ≈ 0.82) → `reports/real_data_benchmark.md`.
-- **Notebooks**: `notebooks/01_eda.ipynb` and `notebooks/02_modeling.ipynb`
+  **Ames Housing** dataset (R² ≈ 0.82) → `../reports/real_data_benchmark.md`.
+- **Notebooks**: `../notebooks/01_eda.ipynb` and `../notebooks/02_modeling.ipynb`
   (executed, with outputs).
 - **`MODEL_CARD.md`**, **`CHANGELOG.md`**, **`CONTRIBUTING.md`**.
 - **Docker CI**: `.github/workflows/docker.yml` builds the image and waits for

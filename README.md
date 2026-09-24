@@ -138,14 +138,14 @@ Property-Price-Market-Dashboard/
 │   ├── build_site.py                   # Renders the GitHub Pages site into docs/
 │   └── build_images.py                 # Generates the README hero → docs/hero.png
 ├── docs/                        # GitHub Pages site + hero.png (static)
+│   ├── MODEL_CARD.md            # Model documentation, metrics, limitations
+│   ├── CHANGELOG.md             # Release history
+│   └── CONTRIBUTING.md          # How to contribute
 ├── tests/                       # pytest suite (offline)
 ├── .github/workflows/
 │   ├── ci.yml                   # CI: ruff lint + pytest on push / PR
 │   ├── docker.yml               # Build + health-check the Docker image
 │   └── refresh-market-data.yml  # Monthly Zillow snapshot refresh
-├── MODEL_CARD.md                # Model documentation, metrics, limitations
-├── CHANGELOG.md                 # Release history
-├── CONTRIBUTING.md              # How to contribute
 ├── requirements.txt             # Pinned runtime dependencies
 ├── requirements-dev.txt         # Dev tools (ruff, pytest, notebooks)
 ├── pyproject.toml               # Project metadata + ruff/pytest config
@@ -339,7 +339,7 @@ notebooks: [`notebooks/`](notebooks) · regenerate:
 
 > Ames is a single, static city — it validates the *approach*, not live US
 > coverage. The shipped dashboard still uses synthetic listings (see
-> [`MODEL_CARD.md`](MODEL_CARD.md)).
+> [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md)).
 
 ---
 
@@ -392,8 +392,8 @@ SHAP explanation, the Hot/Warm/Cool temperature, the plain-English narrative,
 the real-data (Ames) helpers and notebook validity, plus Streamlit `AppTest` UI
 smoke tests.
 
-See [`MODEL_CARD.md`](MODEL_CARD.md) for model documentation and
-[`CHANGELOG.md`](CHANGELOG.md) for release history.
+See [`docs/MODEL_CARD.md`](docs/MODEL_CARD.md) for model documentation and
+[`docs/CHANGELOG.md`](docs/CHANGELOG.md) for release history.
 
 ---
 
