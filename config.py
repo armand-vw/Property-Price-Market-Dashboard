@@ -127,33 +127,18 @@ INTERNATIONAL_HISTORY_QUARTERS: int = 80
 UK_HISTORY_MONTHS: int = 120
 
 #: Countries exposed by the switcher. ``code`` matches the BIS ``REF_AREA``.
+#: A focused set of ten major markets (kept deliberately small for clarity).
 COUNTRIES: dict[str, dict[str, str]] = {
     "US": {"name": "United States", "source": "Zillow Research"},
-    "CA": {"name": "Canada", "source": "BIS"},
     "GB": {"name": "United Kingdom", "source": "HM Land Registry · BIS"},
-    "IE": {"name": "Ireland", "source": "BIS"},
+    "CA": {"name": "Canada", "source": "BIS"},
+    "AU": {"name": "Australia", "source": "BIS"},
+    "JP": {"name": "Japan", "source": "BIS"},
+    "CN": {"name": "China", "source": "BIS"},
     "DE": {"name": "Germany", "source": "BIS"},
     "FR": {"name": "France", "source": "BIS"},
-    "NL": {"name": "Netherlands", "source": "BIS"},
-    "CH": {"name": "Switzerland", "source": "BIS"},
-    "SE": {"name": "Sweden", "source": "BIS"},
-    "NO": {"name": "Norway", "source": "BIS"},
-    "IT": {"name": "Italy", "source": "BIS"},
-    "ES": {"name": "Spain", "source": "BIS"},
-    "PL": {"name": "Poland", "source": "BIS"},
-    "TR": {"name": "Türkiye", "source": "BIS"},
-    "JP": {"name": "Japan", "source": "BIS"},
-    "KR": {"name": "Korea", "source": "BIS"},
-    "CN": {"name": "China", "source": "BIS"},
-    "HK": {"name": "Hong Kong SAR", "source": "BIS"},
-    "SG": {"name": "Singapore", "source": "BIS"},
     "IN": {"name": "India", "source": "BIS"},
-    "ID": {"name": "Indonesia", "source": "BIS"},
-    "AU": {"name": "Australia", "source": "BIS"},
-    "NZ": {"name": "New Zealand", "source": "BIS"},
-    "MX": {"name": "Mexico", "source": "BIS"},
     "BR": {"name": "Brazil", "source": "BIS"},
-    "ZA": {"name": "South Africa", "source": "BIS"},
 }
 
 #: Display order of the country switcher.
@@ -161,7 +146,7 @@ COUNTRY_ORDER: list[str] = list(COUNTRIES)
 
 #: Curated subset shown in cross-country comparison charts (all others remain
 #: available in the switcher).
-COMPARISON_COUNTRIES: list[str] = ["US", "GB", "CA", "AU", "CN", "JP", "DE", "IN"]
+COMPARISON_COUNTRIES: list[str] = ["US", "GB", "CA", "AU", "JP", "CN", "DE", "FR"]
 
 #: UK nations available in the UK regional view (HM Land Registry slugs).
 UK_NATIONS: dict[str, str] = {

@@ -20,7 +20,7 @@ metros. Built with Python, Streamlit, XGBoost, scikit-learn and Plotly.
 > **Data:** US market values, rents, health and trends are **real monthly data
 > from [Zillow Research](https://www.zillow.com/research/data/)** (ZHVI, ZORI,
 > inventory, days-to-pending, median sale price). International data comes from
-> the **Bank for International Settlements** (26 countries) and **HM Land
+> the **Bank for International Settlements** (10 major markets) and **HM Land
 > Registry** (UK House Price Index), each fetched live where possible with a
 > committed snapshot fallback. Listing-level features are synthesised and
 > calibrated to each neighbourhood's real median value.
@@ -59,8 +59,8 @@ market snapshot and fitted model are committed, so it even runs fully offline
 
 ## ✨ Highlights
 
-- **26 countries** — switch between the US plus 25 international markets
-  (UK, Canada, Australia, Germany, France, Japan, China, India, Brazil and more).
+- **10 major markets** — switch between the US, UK, Canada, Australia, Japan,
+  China, Germany, France, India and Brazil.
   Non-US countries show real national BIS house-price indices and a curated
   cross-country comparison; the UK adds regional average prices from HM Land
   Registry.
@@ -73,6 +73,9 @@ market snapshot and fitted model are committed, so it even runs fully offline
 - **Explainable valuations** — every estimate comes with a **“Why this
   estimate?”** chart of per-feature SHAP contributions (via XGBoost's built-in
   `pred_contribs`, no extra dependency) plus aggregated feature importances.
+- **Real-data benchmark + notebooks** — the same pipeline is evaluated on the
+  real **Ames Housing** dataset with 5-fold CV (R² ≈ 0.82), plus EDA and
+  modelling notebooks, so the modelling is validated on real transactions.
 - **Location-based valuation** — estimate any US property via a single location
   dropdown (no metro picker needed); the model derives the metro internally.
 - **Live market data** for 15 major US metros (New York, Los Angeles, Chicago,
@@ -119,13 +122,19 @@ Property-Price-Market-Dashboard/
 │   ├── neighborhood_meta.csv    # neighbourhood values + price anchors
 │   ├── neighborhood_history.csv # monthly neighbourhood home values
 │   └── international/
-│       ├── bis_index.csv        # BIS national indices (six countries)
+│       ├── bis_index.csv        # BIS national indices (10 markets)
 │       └── uk_regions.csv       # UK nation prices (HM Land Registry)
+├── datasets/                    # Real data (Ames Housing) + attribution
+├── notebooks/                   # 01_eda.ipynb, 02_modeling.ipynb (executed)
+├── reports/                     # Real-data benchmark report
 ├── scripts/
 │   ├── build_market_snapshot.py        # Builds market_data/ from Zillow (~100 MB once)
 │   ├── build_international_snapshot.py # Builds BIS + UK snapshots
+│   ├── fetch_real_dataset.py           # Downloads Ames Housing (real, no key)
+│   ├── benchmark_real_data.py          # CV benchmark → reports/
 │   ├── build_site.py                   # Renders the GitHub Pages site into docs/
 │   └── build_images.py                 # Generates the README charts into assets/
+├── real_data.py                 # Ames loader + cross-validation helpers
 ├── docs/                        # GitHub Pages landing page (static)
 ├── assets/                      # README chart images
 ├── tests/                       # pytest suite (offline)
@@ -135,8 +144,9 @@ Property-Price-Market-Dashboard/
 │   └── refresh-market-data.yml  # Monthly Zillow snapshot refresh
 ├── MODEL_CARD.md                # Model documentation, metrics, limitations
 ├── CHANGELOG.md                 # Release history
+├── CONTRIBUTING.md              # How to contribute
 ├── requirements.txt             # Pinned runtime dependencies
-├── requirements-dev.txt         # Dev tools (ruff, pytest, matplotlib)
+├── requirements-dev.txt         # Dev tools (ruff, pytest, notebooks)
 ├── pyproject.toml               # Project metadata + ruff/pytest config
 ├── Dockerfile                   # Self-contained image (no external hosting)
 ├── .dockerignore
@@ -198,7 +208,10 @@ python market_data.py                    # print the live US market overview
 python international_data.py             # print the international overview
 python scripts/build_market_snapshot.py  # refresh US market_data/ from Zillow
 python scripts/build_international_snapshot.py  # refresh BIS + UK snapshots
+python scripts/fetch_real_dataset.py     # download the real Ames dataset
+python scripts/benchmark_real_data.py    # real-data CV benchmark -> reports/
 python scripts/build_site.py             # regenerate the GitHub Pages site
+python -m jupyter nbconvert --to notebook --execute --inplace notebooks/02_modeling.ipynb
 ```
 
 ---
@@ -229,7 +242,7 @@ the committed snapshot monthly.
 
 ### 2. International data (`international_data.py`)
 
-The country switcher covers **26 markets** (US + 25 countries):
+The country switcher covers **10 major markets**:
 
 - **BIS** *Selected Residential Property Prices* — nominal house-price index
   (`2010 = 100`) and year-on-year change, quarterly, national. A small (~135 KB)
@@ -302,12 +315,36 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 **Top price drivers:** market, neighbourhood, square footage, bedrooms, pool.
 
 > Metrics are regenerated into `models/metrics.json` on every training run.
+> Because the dashboard listings are synthetic (anchored to real medians),
+> see the **real-data benchmark** below for an honest read on the modelling.
+
+---
+
+## 🧪 Real-data benchmark (Ames Housing)
+
+To validate the modelling on **real** transactions, the **same leak-free
+pipeline** is evaluated on the public **Ames Housing** dataset (1,460 real
+sales, 25 neighbourhoods) with **5-fold cross-validation**:
+
+| Model | MAE | RMSE | MAPE | R² |
+| --- | --- | --- | --- | --- |
+| Baseline (predict median) | $55,656 | $81,275 | 31.8% | −0.054 |
+| **XGBoost (project defaults)** | **$20,367** | **$32,228** | **12.1%** | **0.820** |
+| XGBoost (lightly tuned) | $20,192 | $31,986 | 11.9% | 0.827 |
+
+Full write-up: [`reports/real_data_benchmark.md`](reports/real_data_benchmark.md) ·
+notebooks: [`notebooks/`](notebooks) · regenerate:
+`python scripts/fetch_real_dataset.py && python scripts/benchmark_real_data.py`.
+
+> Ames is a single, static city — it validates the *approach*, not live US
+> coverage. The shipped dashboard still uses synthetic listings (see
+> [`MODEL_CARD.md`](MODEL_CARD.md)).
 
 ---
 
 ## 🖥️ Dashboard Tour
 
-- **🗺️ Country switcher** — choose from **26 markets**; the whole dashboard
+- **🗺️ Country switcher** — choose from **10 major markets**; the whole dashboard
   adapts (United States is the default).
 - **🧠 Plain-English education layer** — ⓘ tooltips on every metric, a
   **“what this means”** summary, a **Hot / Warm / Cool** market temperature
@@ -346,12 +383,13 @@ Reproduced with the default configuration (`RANDOM_SEED=42`):
 pytest -q
 ```
 
-The suite is **network-free** (56 tests): it uses the committed market snapshot
+The suite is **network-free** (62 tests): it uses the committed market snapshot
 and small synthetic fixtures, covering data reproducibility, cleaning
 invariants, schema validation, market + international aggregation,
 live-to-snapshot fallback, pipeline fitting, feature-importance aggregation,
-SHAP explanation, the Hot/Warm/Cool temperature and the plain-English narrative,
-plus Streamlit `AppTest` UI smoke tests.
+SHAP explanation, the Hot/Warm/Cool temperature, the plain-English narrative,
+the real-data (Ames) helpers and notebook validity, plus Streamlit `AppTest` UI
+smoke tests.
 
 See [`MODEL_CARD.md`](MODEL_CARD.md) for model documentation and
 [`CHANGELOG.md`](CHANGELOG.md) for release history.
@@ -379,13 +417,14 @@ See [`MODEL_CARD.md`](MODEL_CARD.md) for model documentation and
 ## 🗺️ Roadmap
 
 - [x] Add rents (ZORI) and gross rental yield per market.
-- [x] 26-market country switcher (US + 25 countries).
+- [x] 10-market country switcher (US + 9 majors).
 - [x] US market health (inventory, days-to-pending, median sale price).
 - [x] National US view + location-based valuation (no metro picker).
 - [x] Plain-English education layer (tooltips, summary, Hot/Warm/Cool, glossary).
+- [x] Real-data (Ames) benchmark with 5-fold CV + EDA/modelling notebooks.
 - [ ] Add days-on-market / sale-to-list and price-cut share.
-- [ ] Swap synthetic listings for a real listing-level dataset behind the same
-      loader interface.
+- [ ] Swap the dashboard's synthetic listings for a real listing-level dataset
+      behind the same loader interface.
 - [x] SHAP values for per-prediction explainability (XGBoost `pred_contribs`).
 - [ ] Hyper-parameter tuning with Optuna and cross-validated MAPE.
 - [x] Containerise with Docker (self-contained, no external hosting).

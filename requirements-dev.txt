@@ -1,4 +1,4 @@
-# Development-only tools: linting, testing and README image generation.
+# Development-only tools: linting, testing, README images and notebooks.
 # Install with:  pip install -r requirements.txt -r requirements-dev.txt
 
 pytest==9.1.1
@@ -6,3 +6,8 @@ ruff==0.16.8
 
 # Static image generation for README/docs previews (scripts/build_images.py).
 matplotlib==3.11.2
+
+# Notebooks (notebooks/01_eda.ipynb, notebooks/02_modeling.ipynb).
+jupyter==1.1.1
+nbformat==5.11.1
+nbconvert==7.17.1

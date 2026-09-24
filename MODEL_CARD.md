@@ -61,6 +61,22 @@ Valuation ranges shown in the app come from the empirical 10th–90th percentile
 of percentage errors on the hold-out set (≈ ±15–26%), not a symmetric `± MAPE`
 band.
 
+### Real-data benchmark (Ames Housing)
+
+Because the dashboard's listings are synthetic, the **same pipeline** is also
+cross-validated on the real **Ames Housing** dataset (1,460 actual sales,
+25 neighbourhoods, 5-fold CV):
+
+| Model | MAE | RMSE | MAPE | R² |
+| --- | --- | --- | --- | --- |
+| Baseline (predict median) | $55,656 | $81,275 | 31.8% | −0.054 |
+| **XGBoost (project defaults)** | **$20,367** | **$32,228** | **12.1%** | **0.820** |
+| XGBoost (lightly tuned) | $20,192 | $31,986 | 11.9% | 0.827 |
+
+See [`reports/real_data_benchmark.md`](reports/real_data_benchmark.md) and
+[`notebooks/`](notebooks). Ames is a single, static city, so this validates the
+*approach* rather than live US coverage.
+
 ## Limitations
 
 - **Synthetic listings.** Only geographic price levels are real; individual

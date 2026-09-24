@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-09-24T20:09:53+00:00",
+  "n_records": 1460,
+  "n_neighborhoods": 25,
+  "cv": 5,
+  "best_params": {
+    "regressor__model__subsample": 0.7,
+    "regressor__model__n_estimators": 500,
+    "regressor__model__min_child_weight": 4,
+    "regressor__model__max_depth": 6,
+    "regressor__model__learning_rate": 0.02,
+    "regressor__model__colsample_bytree": 0.7
+  },
+  "baseline": {
+    "mean": {
+      "mae": 55655.5192,
+      "rmse": 81275.3217,
+      "mape": 31.8049,
+      "r2": -0.0544
+    },
+    "std": {
+      "mae": 2834.9989,
+      "rmse": 5303.0626,
+      "mape": 3.0661,
+      "r2": 0.0211
+    }
+  },
+  "model": {
+    "mean": {
+      "mae": 20367.044,
+      "rmse": 32227.787,
+      "mape": 12.0612,
+      "r2": 0.8201
+    },
+    "std": {
+      "mae": 1336.709,
+      "rmse": 6919.731,
+      "mape": 0.615,
+      "r2": 0.0995
+    }
+  },
+  "tuned": {
+    "mean": {
+      "mae": 20191.5158,
+      "rmse": 31985.9237,
+      "mape": 11.9321,
+      "r2": 0.8274
+    },
+    "std": {
+      "mae": 1115.4662,
+      "rmse": 5423.6925,
+      "mape": 0.6045,
+      "r2": 0.0763
+    }
+  },
+  "importance": [
+    {
+      "feature": "neighborhood",
+      "importance": 0.5044
+    },
+    {
+      "feature": "garage_spaces",
+      "importance": 0.2198
+    },
+    {
+      "feature": "sqft",
+      "importance": 0.0974
+    },
+    {
+      "feature": "year_built",
+      "importance": 0.0943
+    },
+    {
+      "feature": "bathrooms",
+      "importance": 0.0263
+    },
+    {
+      "feature": "bedrooms",
+      "importance": 0.0254
+    },
+    {
+      "feature": "lot_size",
+      "importance": 0.0235
+    },
+    {
+      "feature": "has_pool",
+      "importance": 0.0089
+    },
+    {
+      "feature": "market",
+      "importance": 0.0
+    }
+  ]
+}
